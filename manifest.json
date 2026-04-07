@@ -1,0 +1,17 @@
+{
+  "name": "RxIntervene Clinical",
+  "short_name": "RxIntervene",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "description": "Clinical Pharmacy Intervention & Research Tool",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/822/822118.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
