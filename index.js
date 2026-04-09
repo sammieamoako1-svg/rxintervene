@@ -8,14 +8,15 @@ import {
     onAuthStateChanged, signOut, sendPasswordResetEmail 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// --- 1. INITIALIZATION ---
+// --- 1. INITIALIZATION (Updated to New Project) ---
 const firebaseConfig = {
-    apiKey: "AIzaSyBbssAjU1KVNGpON9f_pxKhWE19wqgLftU",
-    authDomain: "rxintervene-ca50d.firebaseapp.com",
-    projectId: "rxintervene-ca50d",
-    storageBucket: "rxintervene-ca50d.firebasestorage.app",
-    messagingSenderId: "412246526657",
-    appId: "1:412246526657:web:70ca52ed95bc459392a240"
+    apiKey: "AIzaSyDIQgRQm5GTUWKbPWmqc_c62mDAB6JETJs",
+    authDomain: "rxintervene-f95ce.firebaseapp.com",
+    projectId: "rxintervene-f95ce",
+    storageBucket: "rxintervene-f95ce.firebasestorage.app",
+    messagingSenderId: "785611599195",
+    appId: "1:785611599195:web:712df71a19d8d71c22fe7e",
+    measurementId: "G-QS2H39SH09"
 };
 
 const app = initializeApp(firebaseConfig);
