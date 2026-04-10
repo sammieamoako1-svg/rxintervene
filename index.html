@@ -77,7 +77,14 @@
         <section id="view-home" class="p-4 space-y-3">
             <div class="flex justify-between items-center px-1 mb-2">
                 <h2 class="font-extrabold text-xl text-slate-800">Activity</h2>
-                <button class="text-[10px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl uppercase tracking-wider theme-transition">Recent ▾</button>
+               <select id="homeFilter" onchange="window.renderHomeList()" class="text-[10px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl uppercase tracking-wider theme-transition outline-none border-none">
+    <option value="all">All Recent</option>
+    <option value="Pending">🕒 Pending</option>
+    <option value="Accepted">✅ Accepted</option>
+    <option value="Modified">⚠️ Modified</option>
+    <option value="Rejected">❌ Rejected</option>
+    <option value="followUp">🔔 Follow-ups</option>
+</select>
             </div>
             <div id="intervention-list" class="space-y-4"></div>
         </section>
