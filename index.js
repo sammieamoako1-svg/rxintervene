@@ -173,20 +173,48 @@ window.renderHomeList = () => {
     const filter = document.getElementById('homeFilter').value;
     const homeList = document.getElementById('intervention-list');
     const followupListToday = document.getElementById('followup-list-today');
+    
     homeList.innerHTML = "";
     followupListToday.innerHTML = "";
 
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
     allInterventions.forEach(item => {
         let showOnHome = true;
-        if (filter === 'followUp') {
+        const itemDate = item.timestamp; 
+
+        // --- TIMELINE & STATUS FILTERING LOGIC ---
+        if (filter === 'thisMonth') {
+            // Check if the item belongs to the current month and year
+            if (!itemDate || itemDate.getMonth() !== currentMonth || itemDate.getFullYear() !== currentYear) {
+                showOnHome = false;
+            }
+        } 
+        else if (filter === 'thisYear') {
+            // Check if the item belongs to the current year
+            if (!itemDate || itemDate.getFullYear() !== currentYear) {
+                showOnHome = false;
+            }
+        }
+        else if (filter === 'followUp') {
             if (!item.followUp) showOnHome = false;
-        } else if (filter !== 'all') {
+        } 
+        else if (filter !== 'all') {
+            // Standard Status Filtering (Pending, Accepted, etc.)
             if (item.responseStatus !== filter) showOnHome = false;
         }
 
         if (showOnHome) {
-            const colors = { 'Accepted': 'bg-green-100 text-green-700', 'Pending': 'bg-slate-100 text-slate-400', 'Rejected': 'bg-red-100 text-red-700', 'Modified': 'bg-yellow-100 text-yellow-700' };
-            const dateStr = item.timestamp?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) || "Just now";
+            const colors = { 
+                'Accepted': 'bg-green-100 text-green-700', 
+                'Pending': 'bg-slate-100 text-slate-400', 
+                'Rejected': 'bg-red-100 text-red-700', 
+                'Modified': 'bg-yellow-100 text-yellow-700' 
+            };
+            const dateStr = itemDate?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) || "Just now";
+
             homeList.innerHTML += `
                 <div class="bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm mb-3">
                     <div class="flex justify-between text-[10px] font-black text-slate-400 uppercase mb-2">
@@ -200,6 +228,8 @@ window.renderHomeList = () => {
                     </div>
                 </div>`;
         }
+
+        // --- ALWAYS MAINTAIN THE FOLLOW-UP TAB DATA ---
         if (item.followUp) {
             followupListToday.innerHTML += `
                 <div class="bg-white p-5 rounded-3xl border-l-4 border-blue-500 shadow-sm mb-3">
