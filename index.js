@@ -51,8 +51,7 @@ onAuthStateChanged(auth, (user) => {
         } else if (user.email === "torihammond68@gmail.com") {
             displayName = "Dr. Victoria Hammond";
             initials = "VH";
-        }
-        } else if (user.email === "adelaide-ampofo-asiama@ucc.edu.gh") {
+        } else if (user.email === "adelaide-ampofo-asiama@ucc.edu.gh") {  // This was outside the main if block
             displayName = "Dr. Adelaide Ampofo-Asiama";
             initials = "BOSS";
         }
@@ -66,7 +65,6 @@ onAuthStateChanged(auth, (user) => {
         if (unsubscribeSnapshot) unsubscribeSnapshot();
     }
 });
-
 window.handleAuth = async (type) => {
     const email = document.getElementById('authEmail').value;
     const password = document.getElementById('authPassword').value;
