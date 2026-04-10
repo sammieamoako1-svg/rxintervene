@@ -39,8 +39,8 @@ onAuthStateChanged(auth, (user) => {
         emailDisplay.innerText = user.email;
 
         // Dynamic Name Mapping
-        let displayName = "Hello Host";
-        let initials = "H";
+        let displayName = "Hello Boss";
+        let initials = "BOSS";
 
         if (user.email === "stephen.jalley@ucc.edu.gh") {
             displayName = "Dr. Stephen Jalley";
