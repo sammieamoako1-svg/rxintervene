@@ -42,6 +42,7 @@ onAuthStateChanged(auth, (user) => {
         let displayName = "Hello Boss";
         let initials = "BOSS";
 
+        // Correct email checks within the `if (user)` block
         if (user.email === "stephen.jalley@ucc.edu.gh") {
             displayName = "Dr. Stephen Jalley";
             initials = "SJ";
@@ -51,7 +52,7 @@ onAuthStateChanged(auth, (user) => {
         } else if (user.email === "torihammond68@gmail.com") {
             displayName = "Dr. Victoria Hammond";
             initials = "VH";
-        } else if (user.email === "adelaide-ampofo-asiama@ucc.edu.gh") {  // This was outside the main if block
+        } else if (user.email === "adelaide-ampofo-asiama@ucc.edu.gh") {
             displayName = "Dr. Adelaide Ampofo-Asiama";
             initials = "BOSS";
         }
@@ -59,6 +60,12 @@ onAuthStateChanged(auth, (user) => {
         if (nameDisplay) nameDisplay.innerText = displayName;
         if (avatarDisplay) avatarDisplay.innerText = initials;
 
+        initApp(); 
+    } else {
+        authView.classList.remove('hidden');
+        if (unsubscribeSnapshot) unsubscribeSnapshot();
+    }
+});
         initApp(); 
     } else {
         authView.classList.remove('hidden');
