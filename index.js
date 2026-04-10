@@ -315,6 +315,7 @@ window.exportToPDF = () => {
     const today = new Date().toLocaleDateString('en-GB');
     const generatedBy = document.getElementById('display-user-name').innerText;
     const timeline = document.getElementById('monthFilter').value;
+    const appUrl = window.location.href; // Captures current URL for home button
     
     const now = new Date();
     let filteredData = allInterventions;
@@ -365,12 +366,29 @@ window.exportToPDF = () => {
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
             body { font-family: 'Inter', sans-serif; color: #1e293b; padding: 40px; }
+            .no-print { margin-bottom: 20px; display: flex; justify-content: flex-end; }
+            .home-btn { 
+                text-decoration: none; 
+                background: #2563eb; 
+                color: white; 
+                padding: 10px 20px; 
+                border-radius: 12px; 
+                font-size: 12px; 
+                font-weight: 800; 
+                display: flex; 
+                align-items: center; 
+                gap: 8px;
+            }
             .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid #2563eb; padding-bottom: 20px; }
             table { width: 100%; border-collapse: collapse; margin-top: 30px; }
             th { text-align: left; background: #f8fafc; padding: 12px; font-size: 10px; color: #64748b; border-bottom: 2px solid #e2e8f0; text-transform: uppercase; letter-spacing: 0.05em; }
+            @media print { .no-print { display: none; } }
         </style>
     </head>
     <body>
+        <div class="no-print">
+            <a href="${appUrl}" class="home-btn">🏠 Return to RxIntervene App</a>
+        </div>
         <div class="header">
             <div>
                 <h1 style="color:#2563eb; margin:0; font-size:26px; font-weight: 800;">RxIntervene Audit</h1>
@@ -401,6 +419,7 @@ window.exportToPDF = () => {
     printWindow.document.close();
     printWindow.onload = () => printWindow.print();
 };
+
 // --- 7. PWA & INSTALLATION ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
