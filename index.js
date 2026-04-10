@@ -28,6 +28,7 @@ let wardChart = null, trendChart = null, responseChart = null;
 let unsubscribeSnapshot = null;
 
 // --- 2. AUTHENTICATION & USER NAMING ---
+// --- 2. AUTHENTICATION & USER NAMING ---
 onAuthStateChanged(auth, (user) => {
     const authView = document.getElementById('view-auth');
     const nameDisplay = document.getElementById('display-user-name');
@@ -60,18 +61,16 @@ onAuthStateChanged(auth, (user) => {
         if (nameDisplay) nameDisplay.innerText = displayName;
         if (avatarDisplay) avatarDisplay.innerText = initials;
 
-        initApp(); 
+        // Initialize app only when the user is authenticated
+        initApp();
     } else {
+        // Show the auth view and stop any snapshot listener if the user is logged out
         authView.classList.remove('hidden');
         if (unsubscribeSnapshot) unsubscribeSnapshot();
     }
 });
-        initApp(); 
-    } else {
-        authView.classList.remove('hidden');
-        if (unsubscribeSnapshot) unsubscribeSnapshot();
-    }
-});
+
+// Authentication handling functions
 window.handleAuth = async (type) => {
     const email = document.getElementById('authEmail').value;
     const password = document.getElementById('authPassword').value;
@@ -83,10 +82,14 @@ window.handleAuth = async (type) => {
             await createUserWithEmailAndPassword(auth, email, password);
             alert("Account created successfully!");
         }
-    } catch (err) { alert(err.message); }
+    } catch (err) {
+        alert(err.message);
+    }
 };
 
-window.handleLogout = () => { if(confirm("Sign out of RxIntervene?")) signOut(auth); };
+window.handleLogout = () => {
+    if (confirm("Sign out of RxIntervene?")) signOut(auth);
+};
 
 window.handleResetPassword = async () => {
     const email = document.getElementById('authEmail').value;
@@ -94,9 +97,10 @@ window.handleResetPassword = async () => {
     try {
         await sendPasswordResetEmail(auth, email);
         alert("Password reset email sent!");
-    } catch (err) { alert(err.message); }
+    } catch (err) {
+        alert(err.message);
+    }
 };
-
 // --- 3. NAVIGATION & UI ---
 window.showView = (viewName) => {
     const views = ['home', 'analytics', 'form', 'followup', 'setup'];
