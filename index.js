@@ -49,8 +49,12 @@ onAuthStateChanged(auth, (user) => {
             displayName = "Dr. Samuel Amoako";
             initials = "SA";
         } else if (user.email === "torihammond68@gmail.com") {
-            displayName = "Hello Dr. Victoria Hammond";
+            displayName = "Dr. Victoria Hammond";
             initials = "VH";
+        }
+        } else if (user.email === "adelaide-ampofo-asiama@ucc.edu.gh") {
+            displayName = "Dr. Adelaide Ampofo-Asiama";
+            initials = "BOSS";
         }
 
         if (nameDisplay) nameDisplay.innerText = displayName;
