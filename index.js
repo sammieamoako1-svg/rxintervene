@@ -30,9 +30,35 @@ let unsubscribeSnapshot = null;
 // --- 2. AUTHENTICATION LOGIC ---
 onAuthStateChanged(auth, (user) => {
     const authView = document.getElementById('view-auth');
+    const nameDisplay = document.getElementById('display-user-name');
+    const emailDisplay = document.getElementById('display-user-email');
+    const avatarDisplay = document.querySelector('#view-setup .w-14'); // The "SA" circle
+
     if (user) {
         authView.classList.add('hidden');
-        document.getElementById('display-user-email').innerText = user.email;
+        emailDisplay.innerText = user.email;
+
+        // --- Custom Name Logic ---
+        let displayName = "Hello Host";
+        let initials = "H";
+
+        if (user.email === "stephen.jalley@ucc.edu.gh") {
+            displayName = "Dr. Stephen Jalley";
+            initials = "SJ";
+        } 
+        else if (user.email === "sammieamoako@gmail.com") {
+            displayName = "Dr. Samuel Amoako";
+            initials = "SA";
+        } 
+        else if (user.email === "torihammond68@gmail.com") {
+            displayName = "Hello Dr. Victoria Hammond";
+            initials = "VH";
+        }
+
+        // Update the UI elements
+        if (nameDisplay) nameDisplay.innerText = displayName;
+        if (avatarDisplay) avatarDisplay.innerText = initials;
+
         initApp(); // Start data listeners
     } else {
         authView.classList.remove('hidden');
