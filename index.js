@@ -8,7 +8,7 @@ import {
     onAuthStateChanged, signOut, sendPasswordResetEmail 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// --- 1. INITIALIZATION (Updated to New Project) ---
+// --- 1. INITIALIZATION ---
 const firebaseConfig = {
     apiKey: "AIzaSyDIQgRQm5GTUWKbPWmqc_c62mDAB6JETJs",
     authDomain: "rxintervene-f95ce.firebaseapp.com",
@@ -27,39 +27,36 @@ let allInterventions = [];
 let wardChart = null, trendChart = null, responseChart = null;
 let unsubscribeSnapshot = null;
 
-// --- 2. AUTHENTICATION LOGIC ---
+// --- 2. AUTHENTICATION & USER NAMING ---
 onAuthStateChanged(auth, (user) => {
     const authView = document.getElementById('view-auth');
     const nameDisplay = document.getElementById('display-user-name');
     const emailDisplay = document.getElementById('display-user-email');
-    const avatarDisplay = document.querySelector('#view-setup .w-14'); // The "SA" circle
+    const avatarDisplay = document.querySelector('#view-setup .w-14');
 
     if (user) {
         authView.classList.add('hidden');
         emailDisplay.innerText = user.email;
 
-        // --- Custom Name Logic ---
+        // Dynamic Name Mapping
         let displayName = "Hello Host";
         let initials = "H";
 
         if (user.email === "stephen.jalley@ucc.edu.gh") {
             displayName = "Dr. Stephen Jalley";
             initials = "SJ";
-        } 
-        else if (user.email === "sammieamoako@gmail.com") {
+        } else if (user.email === "sammieamoako@gmail.com") {
             displayName = "Dr. Samuel Amoako";
             initials = "SA";
-        } 
-        else if (user.email === "torihammond68@gmail.com") {
+        } else if (user.email === "torihammond68@gmail.com") {
             displayName = "Hello Dr. Victoria Hammond";
             initials = "VH";
         }
 
-        // Update the UI elements
         if (nameDisplay) nameDisplay.innerText = displayName;
         if (avatarDisplay) avatarDisplay.innerText = initials;
 
-        initApp(); // Start data listeners
+        initApp(); 
     } else {
         authView.classList.remove('hidden');
         if (unsubscribeSnapshot) unsubscribeSnapshot();
@@ -70,7 +67,6 @@ window.handleAuth = async (type) => {
     const email = document.getElementById('authEmail').value;
     const password = document.getElementById('authPassword').value;
     if (!email || !password) return alert("Please enter email and password");
-
     try {
         if (type === 'login') {
             await signInWithEmailAndPassword(auth, email, password);
@@ -81,9 +77,7 @@ window.handleAuth = async (type) => {
     } catch (err) { alert(err.message); }
 };
 
-window.handleLogout = () => {
-    if(confirm("Sign out of RxIntervene?")) signOut(auth);
-};
+window.handleLogout = () => { if(confirm("Sign out of RxIntervene?")) signOut(auth); };
 
 window.handleResetPassword = async () => {
     const email = document.getElementById('authEmail').value;
@@ -128,95 +122,6 @@ window.changeTheme = (color) => {
     });
 };
 
-window.exportToPDF = () => {
-    const printWindow = window.open('', '_blank');
-    const today = new Date().toLocaleDateString('en-GB');
-    
-    // 1. Get the current user and current filter selection
-    const generatedBy = document.getElementById('display-user-name').innerText;
-    const filterValue = document.getElementById('monthFilter').value;
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    
-    // 2. Filter the data based on the selection
-    let filteredData = allInterventions;
-    let reportPeriod = "All Time";
-
-    if (filterValue !== 'all') {
-        const selectedMonth = parseInt(filterValue);
-        filteredData = allInterventions.filter(item => item.timestamp && item.timestamp.getMonth() === selectedMonth);
-        reportPeriod = monthNames[selectedMonth];
-    }
-
-    // 3. Generate Rows for the PDF
-    const rows = filteredData.map(item => {
-        let extraInfo = "";
-        if (item.modificationNote) extraInfo += `<div style="margin-top:4px;"><strong>Modifications:</strong> ${item.modificationNote}</div>`;
-        if (item.notes) extraInfo += `<div style="margin-top:4px;"><strong>Clinical Notes:</strong> ${item.notes}</div>`;
-
-        return `
-        <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;">
-            <td style="padding: 12px; vertical-align: top;">${item.timestamp?.toLocaleDateString('en-GB') || 'Just Now'}</td>
-            <td style="padding: 12px; vertical-align: top;">${item.patientId}</td>
-            <td style="padding: 12px; vertical-align: top;">${item.ward}</td>
-            <td style="padding: 12px; vertical-align: top;">
-                <div style="font-weight: bold; color: #1e293b; font-size: 12px;">${item.intervention}</div>
-                <div style="color: #64748b; margin-top: 2px;">Issue: ${item.issue}</div>
-                <div style="background: #f1f5f9; padding: 6px; border-radius: 4px; margin-top: 8px; font-size: 10px; color: #475569;">
-                    ${extraInfo || "No additional notes."}
-                </div>
-            </td>
-            <td style="padding: 12px; vertical-align: top; font-weight: 800; font-size: 9px; text-transform: uppercase;">
-                ${item.responseStatus}
-            </td>
-        </tr>`;
-    }).join('');
-
-    // 4. Final HTML Template
-    const html = `
-        <html>
-        <head>
-            <title>Report - ${reportPeriod}</title>
-            <style>
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
-                body { font-family: 'Inter', sans-serif; color: #1e293b; padding: 40px; }
-                .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid #2563eb; padding-bottom: 20px; }
-                h1 { color: #2563eb; margin: 0; font-size: 26px; font-weight: 800; }
-                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                th { text-align: left; background: #f8fafc; padding: 12px; font-size: 10px; color: #64748b; border-bottom: 2px solid #e2e8f0; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <div>
-                    <h1>RxIntervene Audit</h1>
-                    <p style="margin:0; font-weight: 700; color: #64748b; text-transform: uppercase; font-size: 11px;">UCC Hospital Clinical Pharmacy</p>
-                </div>
-                <div style="text-align: right; font-size: 11px;">
-                    <strong>Period:</strong> ${reportPeriod}<br>
-                    <strong>Generated By:</strong> ${generatedBy}<br>
-                    <strong>Total Entries:</strong> ${filteredData.length}
-                </div>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width:12%">Date</th>
-                        <th style="width:10%">Patient</th>
-                        <th style="width:10%">Ward</th>
-                        <th style="width:53%">Clinical Details & Notes</th>
-                        <th style="width:15%">Status</th>
-                    </tr>
-                </thead>
-                <tbody>${rows || '<tr><td colspan="5" style="text-align:center; padding: 20px;">No interventions found for this period.</td></tr>'}</tbody>
-            </table>
-        </body>
-        </html>`;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.onload = () => printWindow.print();
-};
-
 // --- 4. DATA ACTIONS ---
 window.completeFollowUp = async (id) => {
     try {
@@ -250,25 +155,38 @@ document.getElementById('interventionForm').addEventListener('submit', async (e)
     finally { btn.disabled = false; btn.innerText = "Save"; }
 });
 
-// --- 5. SYNC & ANALYTICS ---
+// --- 5. SYNC, RENDER & ANALYTICS ---
 const initApp = () => {
     const q = query(collection(db, "interventions"), orderBy("createdAt", "desc"));
     unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
         allInterventions = [];
-        const homeList = document.getElementById('intervention-list');
-        const followupListToday = document.getElementById('followup-list-today');
-        homeList.innerHTML = "";
-        followupListToday.innerHTML = "";
-
         snapshot.forEach(docSnap => {
             const item = docSnap.data();
-            const id = docSnap.id;
-            const timestamp = item.createdAt?.toDate();
-            allInterventions.push({ ...item, timestamp });
+            allInterventions.push({ ...item, timestamp: item.createdAt?.toDate(), id: docSnap.id });
+        });
+        window.renderHomeList();
+        window.updateAllCharts();
+    });
+};
 
+window.renderHomeList = () => {
+    const filter = document.getElementById('homeFilter').value;
+    const homeList = document.getElementById('intervention-list');
+    const followupListToday = document.getElementById('followup-list-today');
+    homeList.innerHTML = "";
+    followupListToday.innerHTML = "";
+
+    allInterventions.forEach(item => {
+        let showOnHome = true;
+        if (filter === 'followUp') {
+            if (!item.followUp) showOnHome = false;
+        } else if (filter !== 'all') {
+            if (item.responseStatus !== filter) showOnHome = false;
+        }
+
+        if (showOnHome) {
             const colors = { 'Accepted': 'bg-green-100 text-green-700', 'Pending': 'bg-slate-100 text-slate-400', 'Rejected': 'bg-red-100 text-red-700', 'Modified': 'bg-yellow-100 text-yellow-700' };
-            const dateStr = timestamp?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) || "Just now";
-
+            const dateStr = item.timestamp?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) || "Just now";
             homeList.innerHTML += `
                 <div class="bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm mb-3">
                     <div class="flex justify-between text-[10px] font-black text-slate-400 uppercase mb-2">
@@ -281,19 +199,17 @@ const initApp = () => {
                         <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${colors[item.responseStatus]}">${item.responseStatus}</span>
                     </div>
                 </div>`;
-
-            if (item.followUp) {
-                followupListToday.innerHTML += `
-                    <div class="bg-white p-5 rounded-3xl border-l-4 border-blue-500 shadow-sm mb-3">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-[10px] font-black text-slate-400 uppercase">${item.patientId} • ${item.ward}</span>
-                        </div>
-                        <p class="text-sm font-bold text-slate-700 mb-4">${item.intervention}</p>
-                        <button onclick="completeFollowUp('${id}')" class="w-full py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:bg-blue-700 theme-transition">✔ Mark Done</button>
-                    </div>`;
-            }
-        });
-        window.updateAllCharts();
+        }
+        if (item.followUp) {
+            followupListToday.innerHTML += `
+                <div class="bg-white p-5 rounded-3xl border-l-4 border-blue-500 shadow-sm mb-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-black text-slate-400 uppercase">${item.patientId} • ${item.ward}</span>
+                    </div>
+                    <p class="text-sm font-bold text-slate-700 mb-4">${item.intervention}</p>
+                    <button onclick="completeFollowUp('${item.id}')" class="w-full py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:bg-blue-700 theme-transition">✔ Mark Done</button>
+                </div>`;
+        }
     });
 };
 
@@ -357,14 +273,55 @@ function renderChart(id, type, labels, data) {
     if (id === 'wardChart' && wardChart) wardChart.destroy();
     if (id === 'responseChart' && responseChart) responseChart.destroy();
     if (id === 'trendChart' && trendChart) trendChart.destroy();
-
     const newChart = new Chart(ctx, config);
     if (id === 'wardChart') wardChart = newChart;
     if (id === 'responseChart') responseChart = newChart;
     if (id === 'trendChart') trendChart = newChart;
 }
 
-// --- 6. PWA & INSTALLATION ---
+// --- 6. EXPORT FUNCTION ---
+window.exportToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    const today = new Date().toLocaleDateString('en-GB');
+    const generatedBy = document.getElementById('display-user-name').innerText;
+    const filterValue = document.getElementById('monthFilter').value;
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    
+    let filteredData = allInterventions;
+    let reportPeriod = "All Time";
+    if (filterValue !== 'all') {
+        const selectedMonth = parseInt(filterValue);
+        filteredData = allInterventions.filter(item => item.timestamp && item.timestamp.getMonth() === selectedMonth);
+        reportPeriod = monthNames[selectedMonth];
+    }
+
+    const rows = filteredData.map(item => {
+        let extraInfo = "";
+        if (item.modificationNote) extraInfo += `<div><strong>Modifications:</strong> ${item.modificationNote}</div>`;
+        if (item.notes) extraInfo += `<div><strong>Clinical Notes:</strong> ${item.notes}</div>`;
+        return `
+        <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;">
+            <td style="padding: 12px; vertical-align: top;">${item.timestamp?.toLocaleDateString('en-GB') || 'Just Now'}</td>
+            <td style="padding: 12px; vertical-align: top;">${item.patientId}</td>
+            <td style="padding: 12px; vertical-align: top;">${item.ward}</td>
+            <td style="padding: 12px; vertical-align: top;">
+                <div style="font-weight: bold; color: #1e293b; font-size: 12px;">${item.intervention}</div>
+                <div style="color: #64748b; margin-top: 2px;">Issue: ${item.issue}</div>
+                <div style="background: #f1f5f9; padding: 8px; border-radius: 8px; margin-top: 8px; font-size: 10px; color: #475569;">
+                    ${extraInfo || "No additional notes recorded."}
+                </div>
+            </td>
+            <td style="padding: 12px; vertical-align: top; font-weight: 800; font-size: 9px; text-transform: uppercase;">${item.responseStatus}</td>
+        </tr>`;
+    }).join('');
+
+    const html = `<html><head><title>RxIntervene Report</title><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');body{font-family:'Inter',sans-serif;color:#1e293b;padding:40px;}.header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:4px solid #2563eb;padding-bottom:20px;}table{width:100%;border-collapse:collapse;margin-top:30px;}th{text-align:left;background:#f8fafc;padding:12px;font-size:10px;color:#64748b;border-bottom:2px solid #e2e8f0;text-transform:uppercase;}</style></head><body><div class="header"><div><h1 style="color:#2563eb;margin:0;font-size:26px;">RxIntervene Audit</h1><p style="margin:0;font-weight:700;color:#64748b;text-transform:uppercase;font-size:11px;">UCC Hospital Clinical Pharmacy</p></div><div style="text-align:right;font-size:11px;"><strong>Period:</strong> ${reportPeriod}<br><strong>Generated By:</strong> ${generatedBy}<br><strong>Date:</strong> ${today}</div></div><table><thead><tr><th style="width:12%">Date</th><th style="width:10%">Patient</th><th style="width:10%">Ward</th><th style="width:53%">Clinical Details & Notes</th><th style="width:15%">Status</th></tr></thead><tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:20px;">No records found.</td></tr>'}</tbody></table></body></html>`;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => printWindow.print();
+};
+
+// --- 7. PWA & INSTALLATION ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
@@ -375,16 +332,13 @@ let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    console.log('App ready for install');
 });
 
 window.installApp = async () => {
     if (deferredPrompt) {
         deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') console.log('App installed');
         deferredPrompt = null;
     } else {
-        alert("To install: Tap the browser 'Share' icon and select 'Add to Home Screen'");
+        alert("To install: Tap 'Share' and select 'Add to Home Screen'");
     }
 };
