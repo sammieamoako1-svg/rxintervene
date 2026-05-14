@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, updateDoc, doc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, updateDoc, doc, serverTimestamp, query, orderBy, onSnapshot, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
 // --- 1. INITIALIZATION ---
 const firebaseConfig = {
@@ -16,34 +17,36 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const aiModel = new GoogleGenerativeAI("AIzaSyANCStxyHo879glhuzYTzvazrB-64JUZkY").getGenerativeModel({ 
+    model: "gemini-3.1-flash-lite-preview",
+    safetySettings: [{ category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }]
+});
 
 let allInterventions = [];
 let wardChart = null, trendChart = null, responseChart = null;
 let unsubscribeSnapshot = null;
+let lastAiAdvice = "";
 
-// --- 2. AUTHENTICATION & USER NAMING ---
+// --- 2. AUTHENTICATION & USER MAPPING ---
 onAuthStateChanged(auth, (user) => {
     const authView = document.getElementById('view-auth');
-    const nameDisplay = document.getElementById('display-user-name');
-    const emailDisplay = document.getElementById('display-user-email');
-    const avatarDisplay = document.querySelector('.avatar-box');
-
     if (user) {
         if (authView) authView.classList.add('hidden');
-        if (emailDisplay) emailDisplay.innerText = user.email;
-
-        let displayName = "Hello Boss";
-        let initials = "BOSS";
-
-        if (user.email === "stephen.jalley@ucc.edu.gh") { displayName = "Dr. Stephen Jalley"; initials = "SJ"; } 
-        else if (user.email === "sammieamoako@gmail.com") { displayName = "Dr. Samuel Amoako"; initials = "SA"; } 
-        else if (user.email === "torihammond68@gmail.com") { displayName = "Dr. Victoria Hammond"; initials = "VH"; } 
+        const emailDisplay = document.getElementById('display-user-email');
+        const nameDisplay = document.getElementById('display-user-name');
+        const avatarDisplay = document.querySelector('.avatar-box');
+        
+        emailDisplay.innerText = user.email;
+        let displayName = "Hello Boss", initials = "BOSS";
+        if (user.email === "stephen.jalley@ucc.edu.gh") { displayName = "Dr. Stephen Jalley"; initials = "SJ"; }
+        else if (user.email === "sammieamoako@gmail.com") { displayName = "Dr. Samuel Amoako"; initials = "SA"; }
+        else if (user.email === "torihammond68@gmail.com") { displayName = "Dr. Victoria Hammond"; initials = "VH"; }
         else if (user.email === "adelaide-ampofo-asiama@ucc.edu.gh") { displayName = "Dr. Adelaide Ampofo-Asiama"; initials = "BOSS"; }
-
-        if (nameDisplay) nameDisplay.innerText = displayName;
-        if (avatarDisplay) avatarDisplay.innerText = initials;
-
+        
+        nameDisplay.innerText = displayName;
+        avatarDisplay.innerText = initials;
         initApp();
+        showView('home');
     } else {
         if (authView) authView.classList.remove('hidden');
         if (unsubscribeSnapshot) unsubscribeSnapshot();
@@ -51,172 +54,123 @@ onAuthStateChanged(auth, (user) => {
 });
 
 window.handleAuth = async (type) => {
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    if (!email || !password) return alert("Please enter email and password");
+    const e = document.getElementById('authEmail').value, p = document.getElementById('authPassword').value;
     try {
-        if (type === 'login') await signInWithEmailAndPassword(auth, email, password);
-        else { await createUserWithEmailAndPassword(auth, email, password); alert("Account created successfully!"); }
+        if (type === 'login') await signInWithEmailAndPassword(auth, e, p);
+        else await createUserWithEmailAndPassword(auth, e, p);
     } catch (err) { alert(err.message); }
 };
 
 window.handleLogout = () => { if (confirm("Sign out?")) signOut(auth); };
 
 window.handleResetPassword = async () => {
-    const email = document.getElementById('authEmail').value;
-    if (!email) return alert("Enter your email address first.");
-    try { await sendPasswordResetEmail(auth, email); alert("Password reset email sent!"); } 
-    catch (err) { alert(err.message); }
+    const e = document.getElementById('authEmail').value;
+    if (e) await sendPasswordResetEmail(auth, e).then(() => alert("Reset email sent!"));
 };
 
-// --- 3. NAVIGATION & UI ---
-window.showView = (viewName) => {
-    ['home', 'analytics', 'form', 'followup', 'setup'].forEach(v => {
-        const el = document.getElementById(`view-${v}`);
-        if (el) el.classList.add('hidden');
-    });
-    const target = document.getElementById(`view-${viewName}`);
-    if (target) target.classList.remove('hidden');
-    
-    document.querySelectorAll('nav button').forEach(btn => {
-        btn.classList.remove('text-blue-600'); btn.classList.add('text-slate-300');
-    });
-    const activeBtn = document.getElementById(`nav-${viewName}`);
-    if (activeBtn) activeBtn.classList.replace('text-slate-300', 'text-blue-600');
+// --- 3. HIGH-FIDELITY RAG (WINDOWED RETRIEVAL) ---
+async function getBnfContext(issueText) {
+    const target = issueText.toLowerCase().split(/\W+/).filter(w => w.length > 3).sort((a,b) => b.length - a.length)[0];
+    const q = query(collection(db, "clinical_knowledge"), orderBy("chunk_index"), limit(5000));
+    const snap = await getDocs(q);
+    let all = []; snap.forEach(d => all.push(d.data()));
+    const start = all.findIndex(d => d.text.toLowerCase().includes(target));
+    if (start === -1) return "";
+    return all.slice(start, start + 15).map(p => p.text).join("\n---\n");
+}
+
+window.invokeAiAssistant = async () => {
+    const panel = document.getElementById('ai-panel'), txt = document.getElementById('ai-suggestion-text'), issue = document.getElementById('issue').value;
+    panel.classList.remove('hidden'); txt.innerHTML = "Reconstructing...";
+    try {
+        const ctx = await getBnfContext(issue);
+        const res = await aiModel.generateContent(`ROLE: Senior Pharmacist. Reconstruct full monograph for ${issue} from CONTEXT: ${ctx}. Use 'l' for headers, '▶' for routes. NO SUMMARIZATION.`);
+        lastAiAdvice = res.response.text();
+        txt.innerHTML = lastAiAdvice.replace(/\n/g, '<br>').replace(/l (INDICATIONS|DOSE|CAUTIONS|SIDE-EFFECTS|PREGNANCY|HEPATIC|RENAL|MONITORING|DRUG ACTION)/g, '<br><b>l $1</b>').replace(/▶/g, '<span class="text-blue-600 font-bold">▶</span>');
+    } catch (e) { txt.innerText = "Error assembling data."; }
 };
 
-window.toggleModField = () => {
-    const status = document.getElementById('responseStatus').value;
-    document.getElementById('modField').classList.toggle('hidden', status !== 'Modified');
+window.applyAiSuggestion = () => { document.getElementById('intervention').value = lastAiAdvice; document.getElementById('ai-panel').classList.add('hidden'); };
+
+// --- 4. NAVIGATION & COUNSELING ---
+window.showView = (name) => {
+    ['home', 'analytics', 'form', 'followup', 'setup'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+    document.getElementById(`view-${name}`).classList.remove('hidden');
+    document.querySelectorAll('nav button').forEach(b => b.classList.replace('text-blue-600', 'text-slate-300'));
+    document.getElementById(`nav-${name}`)?.classList.replace('text-slate-300', 'text-blue-600');
 };
 
-window.changeTheme = (color) => {
-    const themeMap = { 'blue': '#2563eb', 'emerald': '#10b981', 'indigo': '#4f46e5', 'slate': '#1e293b' };
-    document.querySelectorAll('.bg-blue-600, .text-blue-600, #display-user-name, #display-user-email, .avatar-box').forEach(el => {
-        if (el.classList.contains('bg-blue-600') || el.tagName === 'BUTTON') el.style.backgroundColor = themeMap[color];
-        else el.style.color = themeMap[color];
-    });
-};
-
-// --- 4. COUNSELING NOTES LOGIC ---
-window.toggleCounselingForm = (show) => {
-    document.getElementById('view-counseling').classList.toggle('hidden', !show);
-};
+window.toggleCounselingForm = (show) => { document.getElementById('view-counseling').classList.toggle('hidden', !show); };
 
 document.getElementById('counselingForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn = document.getElementById('counselingSubmitBtn');
-    btn.disabled = true; btn.innerText = "...";
-    const data = {
-        patientId: document.getElementById('counselPatientId').value,
-        drugs: document.getElementById('counselDrugs').value,
-        notes: document.getElementById('counselNotes').value,
-        userId: auth.currentUser.uid,
-        createdAt: serverTimestamp()
-    };
-    try {
-        await addDoc(collection(db, "counseling"), data);
-        await addDoc(collection(db, "interventions"), {
-            patientId: data.patientId, ward: "Counseling", urgency: "Normal",
-            issue: "Patient Counseling", intervention: `Counseling: ${data.drugs}`,
-            responseStatus: "Accepted", userId: auth.currentUser.uid, createdAt: serverTimestamp()
-        });
-        e.target.reset(); window.toggleCounselingForm(false);
-    } catch (err) { alert("Error saving."); }
-    finally { btn.disabled = false; btn.innerText = "Save"; }
+    const data = { patientId: document.getElementById('counselPatientId').value, drugs: document.getElementById('counselDrugs').value, notes: document.getElementById('counselNotes').value, userId: auth.currentUser.uid, createdAt: serverTimestamp() };
+    await addDoc(collection(db, "counseling"), data);
+    await addDoc(collection(db, "interventions"), { patientId: data.patientId, ward: "Counseling", urgency: "Normal", issue: "Patient Counseling", intervention: `Counseling: ${data.drugs}`, responseStatus: "Accepted", userId: auth.currentUser.uid, createdAt: serverTimestamp() });
+    e.target.reset(); window.toggleCounselingForm(false);
 });
 
-// --- 5. DATA ACTIONS ---
-window.completeFollowUp = async (id) => {
-    try { await updateDoc(doc(db, "interventions", id), { followUp: false, completedAt: serverTimestamp() }); } 
-    catch (err) { console.error(err); }
-};
+// --- 5. CORE ACTIONS ---
+window.toggleModField = () => { document.getElementById('modField').classList.toggle('hidden', document.getElementById('responseStatus').value !== 'Modified'); };
+
+window.completeFollowUp = async (id) => { await updateDoc(doc(db, "interventions", id), { followUp: false }); };
 
 document.getElementById('interventionForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true; btn.innerText = "...";
-    const data = {
-        patientId: document.getElementById('patientId').value, ward: document.getElementById('ward').value,
-        urgency: document.getElementById('urgency').value, issue: document.getElementById('issue').value,
-        intervention: document.getElementById('intervention').value, responseStatus: document.getElementById('responseStatus').value,
-        modificationNote: document.getElementById('modificationNote').value || "", notes: document.getElementById('notes').value || "",
-        followUp: document.getElementById('followUp').checked, userId: auth.currentUser.uid, createdAt: serverTimestamp()
-    };
-    try { await addDoc(collection(db, "interventions"), data); e.target.reset(); window.showView('home'); } 
-    catch (err) { console.error(err); }
-    finally { btn.disabled = false; btn.innerText = "Save"; }
+    const data = { patientId: document.getElementById('patientId').value, ward: document.getElementById('ward').value, urgency: document.getElementById('urgency').value, issue: document.getElementById('issue').value, intervention: document.getElementById('intervention').value, responseStatus: document.getElementById('responseStatus').value, modificationNote: document.getElementById('modificationNote').value || "", notes: document.getElementById('notes').value || "", followUp: document.getElementById('followUp').checked, userId: auth.currentUser.uid, createdAt: serverTimestamp() };
+    await addDoc(collection(db, "interventions"), data); e.target.reset(); showView('home');
 });
 
-// --- 6. SYNC & ANALYTICS ---
 const initApp = () => {
     const q = query(collection(db, "interventions"), orderBy("createdAt", "desc"));
-    unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-        allInterventions = [];
-        snapshot.forEach(docSnap => {
-            const item = docSnap.data();
-            allInterventions.push({ ...item, timestamp: item.createdAt?.toDate(), id: docSnap.id });
-        });
+    unsubscribeSnapshot = onSnapshot(q, (snap) => {
+        allInterventions = []; snap.forEach(d => allInterventions.push({ ...d.data(), timestamp: d.data().createdAt?.toDate(), id: d.id }));
         window.renderHomeList(); window.updateAllCharts();
     });
 };
 
 window.renderHomeList = () => {
-    const filter = document.getElementById('homeFilter').value;
-    const homeList = document.getElementById('intervention-list');
-    const followupList = document.getElementById('followup-list-today');
-    homeList.innerHTML = ""; followupList.innerHTML = "";
-
+    const filter = document.getElementById('homeFilter').value, list = document.getElementById('intervention-list'), fup = document.getElementById('followup-list-today');
+    list.innerHTML = ""; fup.innerHTML = "";
     allInterventions.forEach(item => {
         let show = true;
-        if (filter === 'thisMonth') {
-            const now = new Date();
-            if (!item.timestamp || item.timestamp.getMonth() !== now.getMonth() || item.timestamp.getFullYear() !== now.getFullYear()) show = false;
-        } else if (filter === 'thisYear') {
-            const now = new Date();
-            if (!item.timestamp || item.timestamp.getFullYear() !== now.getFullYear()) show = false;
-        } else if (filter === 'followUp') { if (!item.followUp) show = false; } 
-        else if (filter !== 'all' && item.responseStatus !== filter) show = false;
+        if (filter === 'Counseling') { if (item.ward !== 'Counseling') show = false; }
+        else if (filter !== 'all' && filter !== 'followUp' && item.responseStatus !== filter) show = false;
+        else if (filter === 'followUp' && !item.followUp) show = false;
 
         if (show) {
             const colors = { 'Accepted': 'bg-green-100 text-green-700', 'Pending': 'bg-slate-100 text-slate-400', 'Rejected': 'bg-red-100 text-red-700', 'Modified': 'bg-yellow-100 text-yellow-700' };
-            const dateStr = item.timestamp?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) || "Just now";
-            homeList.innerHTML += `<div class="bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm mb-3">
-                <div class="flex justify-between text-[10px] font-black text-slate-400 uppercase mb-2"><span>${dateStr} • ${item.patientId} • ${item.ward}</span><span class="text-blue-600">${item.urgency}</span></div>
-                <h3 class="font-bold text-slate-800 text-sm mb-1">${item.intervention}</h3>
-                <p class="text-[10px] text-slate-500 italic">Issue: ${item.issue}</p>
-                <div class="pt-3 mt-3 border-t border-slate-50"><span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${colors[item.responseStatus]}">${item.responseStatus}</span></div>
-            </div>`;
+            list.innerHTML += `<div class="bg-white p-5 rounded-[2rem] border mb-3"><p class="text-[10px] uppercase text-slate-400">${item.patientId} • ${item.ward}</p><h3 class="font-bold text-sm">${item.intervention}</h3><span class="px-2 py-1 rounded-full text-[10px] uppercase ${colors[item.responseStatus]}">${item.responseStatus}</span></div>`;
         }
         if (item.followUp) {
-            followupList.innerHTML += `<div class="bg-white p-5 rounded-3xl border-l-4 border-blue-500 shadow-sm mb-3">
-                <p class="text-sm font-bold text-slate-700 mb-4">${item.intervention}</p>
-                <button onclick="completeFollowUp('${item.id}')" class="w-full py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase">✔ Mark Done</button>
-            </div>`;
+            fup.innerHTML += `<div class="bg-white p-5 rounded-3xl border-l-4 border-blue-500 mb-3"><p class="text-sm font-bold">${item.intervention}</p><button onclick="completeFollowUp('${item.id}')" class="w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] mt-2">Done</button></div>`;
         }
     });
 };
 
+// --- 6. ORIGINAL PDF EXPORT TEMPLATES ---
+window.exportToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    const rows = allInterventions.map(item => `<tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;"><td style="padding: 12px; vertical-align: top;">${item.timestamp?.toLocaleDateString('en-GB') || ''}<br>ID: ${item.patientId}</td><td style="padding: 12px; vertical-align: top;">${item.ward}</td><td style="padding: 12px; vertical-align: top;"><b>${item.intervention}</b><br>Issue: ${item.issue}</td><td style="padding: 12px; vertical-align: top;">${item.responseStatus}</td></tr>`).join('');
+    printWindow.document.write(`<html><head><style>body{font-family:sans-serif; padding:40px;} .header{border-bottom:4px solid #2563eb; padding-bottom:20px;} table{width:100%; border-collapse:collapse; margin-top:30px;} th{text-align:left; background:#f8fafc; padding:12px; font-size:10px; color:#64748b; text-transform:uppercase;}</style></head><body><div class="header"><h1 style="color:#2563eb; margin:0;">RxIntervene Audit</h1><p>UCC Hospital Clinical Pharmacy</p></div><table><thead><tr><th>Date & ID</th><th>Ward</th><th>Clinical Details</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
+    printWindow.document.close(); printWindow.print();
+};
+
+window.exportCounselingToPDF = async () => {
+    const snap = await getDocs(query(collection(db, "counseling"), orderBy("createdAt", "desc")));
+    const printWindow = window.open('', '_blank');
+    let rows = ""; snap.forEach(d => { const v = d.data(); rows += `<tr style="border-bottom:1px solid #e2e8f0; font-size:11px;"><td style="padding:12px;">${v.createdAt?.toDate().toLocaleDateString('en-GB') || ''}<br>ID: ${v.patientId}</td><td style="padding:12px;"><b>Drugs: ${v.drugs}</b><br>Notes: ${v.notes}</td></tr>`; });
+    printWindow.document.write(`<html><head><style>body{font-family:sans-serif; padding:40px;} .header{border-bottom:4px solid #10b981; padding-bottom:20px;} table{width:100%; border-collapse:collapse; margin-top:30px;} th{text-align:left; background:#f0fdf4; padding:12px; font-size:10px; color:#065f46; text-transform:uppercase;}</style></head><body><div class="header"><h1 style="color:#10b981; margin:0;">Counseling Audit</h1><p>UCC Hospital Clinical Pharmacy</p></div><table><thead><tr><th>Date & ID</th><th>Counseling Details</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
+    printWindow.document.close(); printWindow.print();
+};
+
 window.updateAllCharts = () => {
-    const selectedMonth = document.getElementById('monthFilter').value;
-    let filtered = allInterventions;
-    if (selectedMonth !== 'all') filtered = allInterventions.filter(item => item.timestamp && item.timestamp.getMonth() === parseInt(selectedMonth));
-
-    const wardData = {}; const outcomeData = { Accepted: 0, Rejected: 0, Modified: 0, Pending: 0 };
-    const weekCounts = [0, 0, 0, 0, 0];
-
-    filtered.forEach(item => {
-        wardData[item.ward] = (wardData[item.ward] || 0) + 1;
-        if (outcomeData.hasOwnProperty(item.responseStatus)) outcomeData[item.responseStatus]++;
-        if (item.timestamp) {
-            const weekIdx = Math.min(Math.floor((item.timestamp.getDate() - 1) / 7), 4);
-            weekCounts[weekIdx]++;
-        }
-    });
-
+    const mon = document.getElementById('monthFilter').value;
+    let filtered = (mon === 'all') ? allInterventions : allInterventions.filter(i => i.timestamp && i.timestamp.getMonth() === parseInt(mon));
+    const wardData = {}, outcomeData = { Accepted: 0, Rejected: 0, Modified: 0, Pending: 0 }, weekCounts = [0, 0, 0, 0, 0];
+    filtered.forEach(i => { wardData[i.ward] = (wardData[i.ward] || 0) + 1; if (outcomeData.hasOwnProperty(i.responseStatus)) outcomeData[i.responseStatus]++; if (i.timestamp) weekCounts[Math.min(Math.floor((i.timestamp.getDate() - 1) / 7), 4)]++; });
     document.getElementById('stat-total').innerText = filtered.length;
     document.getElementById('stat-rate').innerText = filtered.length > 0 ? Math.round((outcomeData.Accepted / filtered.length) * 100) + "%" : "0%";
-
     renderChart('wardChart', 'doughnut', Object.keys(wardData), Object.values(wardData));
     renderChart('responseChart', 'bar', ['Acc', 'Rej', 'Mod', 'Pen'], [outcomeData.Accepted, outcomeData.Rejected, outcomeData.Modified, outcomeData.Pending]);
     renderChart('trendChart', 'line', ['W1', 'W2', 'W3', 'W4', 'W5'], weekCounts);
@@ -224,21 +178,10 @@ window.updateAllCharts = () => {
 
 function renderChart(id, type, labels, data) {
     const ctx = document.getElementById(id).getContext('2d');
-    const config = {
-        type: type,
-        data: { labels: labels, datasets: [{ data: data, backgroundColor: id === 'responseChart' ? ['#22c55e', '#ef4444', '#f59e0b', '#94a3b8'] : ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bae6fd'], borderColor: '#2563eb', tension: 0.4 }] },
-        options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 8 } } } } }
-    };
-    if (id === 'wardChart' && wardChart) wardChart.destroy();
-    if (id === 'responseChart' && responseChart) responseChart.destroy();
-    if (id === 'trendChart' && trendChart) trendChart.destroy();
-    const nc = new Chart(ctx, config);
-    if (id === 'wardChart') wardChart = nc; else if (id === 'responseChart') responseChart = nc; else trendChart = nc;
+    const nc = new Chart(ctx, { type, data: { labels, datasets: [{ data, backgroundColor: id === 'responseChart' ? ['#22c55e', '#ef4444', '#f59e0b', '#94a3b8'] : ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bae6fd'], tension: 0.4 }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 8 } } } } } });
+    if (id === 'wardChart') { if (wardChart) wardChart.destroy(); wardChart = nc; }
+    else if (id === 'responseChart') { if (responseChart) responseChart.destroy(); responseChart = nc; }
+    else { if (trendChart) trendChart.destroy(); trendChart = nc; }
 }
 
-window.exportToPDF = () => {
-    const printWindow = window.open('', '_blank');
-    const rows = allInterventions.map(item => `<tr><td>${item.timestamp?.toLocaleDateString('en-GB') || ''}</td><td>${item.patientId}</td><td>${item.ward}</td><td>${item.intervention}</td><td>${item.responseStatus}</td></tr>`).join('');
-    printWindow.document.write(`<html><body><h1>RxIntervene Report</h1><table border="1"><thead><tr><th>Date</th><th>ID</th><th>Ward</th><th>Intervention</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
-    printWindow.document.close(); printWindow.print();
-};
+document.addEventListener('keyup', (e) => { if (e.target.id === 'issue') document.getElementById('ai-trigger').classList.toggle('hidden', e.target.value.length < 5); });
