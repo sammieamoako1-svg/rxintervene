@@ -15,14 +15,13 @@
         .safe-bottom { padding-bottom: calc(2.5rem + env(safe-area-inset-bottom)); }
         input, select, textarea { font-size: 16px !important; } 
         .theme-transition { transition: all 0.3s ease; }
-        #submitBtn:active, #counselingSubmitBtn:active { transform: scale(0.95); opacity: 0.8; }
+        #submitBtn:active, #counselingSubmitBtn:active, #editSubmitBtn:active { transform: scale(0.95); opacity: 0.8; }
         .bnf-content b { color: #1d4ed8; display: block; margin-top: 10px; }
     </style>
     <link rel="manifest" href="manifest.json">
 </head>
 <body class="bg-slate-50 h-screen flex flex-col overflow-hidden text-slate-900">
 
-    <!-- AUTHENTICATION VIEW -->
     <section id="view-auth" class="fixed inset-0 bg-white z-[100] flex flex-col p-8 space-y-6">
         <div class="mt-12 text-center">
             <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center shadow-xl shadow-blue-100 mb-4 theme-transition">
@@ -49,7 +48,6 @@
         </div>
     </section>
 
-    <!-- HEADER -->
     <header class="bg-white px-6 py-4 shadow-sm border-b z-10 flex justify-between items-center">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-100 theme-transition header-icon">
@@ -63,7 +61,6 @@
         <button onclick="showView('setup')" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-sm border border-slate-200 active:scale-90 transition-transform">👤</button>
     </header>
 
-    <!-- MAIN SCROLLABLE CONTENT -->
     <main class="flex-1 overflow-y-auto pb-32 hide-scrollbar">
         
         <section id="view-home" class="p-4 space-y-3">
@@ -127,7 +124,6 @@
         </section>
     </main>
 
-    <!-- INTERVENTION FORM -->
     <section id="view-form" class="hidden fixed inset-0 bg-white z-[60] overflow-y-auto">
         <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
             <button onclick="showView('home')" class="text-slate-400 font-bold">Cancel</button>
@@ -161,7 +157,50 @@
         </form>
     </section>
 
-    <!-- COUNSELING MODAL -->
+    <section id="view-edit-modal" class="hidden fixed inset-0 bg-white z-[250] overflow-y-auto">
+        <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
+            <button onclick="window.closeEditModal()" class="text-slate-400 font-bold">Cancel</button>
+            <h2 class="font-extrabold text-lg text-amber-600">Edit Record</h2>
+            <button id="editSubmitBtn" class="text-amber-600 font-black">Update</button>
+        </div>
+        <form id="editForm" class="p-6 space-y-6 pb-32">
+            <input type="hidden" id="editItemId">
+            <input type="text" id="editPatientId" placeholder="Patient ID" class="w-full py-2 text-2xl outline-none font-bold border-b border-slate-100" required>
+            
+            <div class="grid grid-cols-2 gap-6">
+                <select id="editWard" class="p-3 bg-slate-100 rounded-xl font-bold text-sm outline-none">
+                    <option>Emergency</option><option>Medical</option><option>Surgical</option><option>Pediatric</option><option>Counseling</option>
+                </select>
+                <select id="editUrgency" class="p-3 bg-slate-100 rounded-xl font-bold text-sm outline-none">
+                    <option>Normal</option><option>High</option><option>Stat</option>
+                </select>
+            </div>
+            
+            <div class="space-y-1">
+                <label class="text-[10px] font-black text-slate-400 uppercase ml-2">The Clinical Issue</label>
+                <input type="text" id="editIssue" placeholder="The Issue" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-sm">
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Pharmacist Intervention</label>
+                <textarea id="editIntervention" placeholder="Intervention" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-sm h-24"></textarea>
+            </div>
+            
+            <div class="bg-amber-600 rounded-[2rem] p-6 text-white space-y-4">
+                <select id="editResponseStatus" onchange="window.toggleEditModField()" class="w-full p-3 rounded-xl bg-white/20 border border-white/30 text-white font-bold outline-none">
+                    <option class="text-slate-900" value="Pending">Pending</option>
+                    <option class="text-slate-900" value="Accepted">Accepted</option>
+                    <option class="text-slate-900" value="Modified">Modified</option>
+                    <option class="text-slate-900" value="Rejected">Rejected</option>
+                </select>
+                <div id="editModField" class="hidden">
+                    <textarea id="editModificationNote" placeholder="Doctor's changes..." class="w-full p-3 rounded-xl bg-white/10 text-white text-sm outline-none h-20"></textarea>
+                </div>
+                <input type="text" id="editNotes" placeholder="General Clinical Notes" class="w-full p-3 rounded-xl bg-white/20 text-white text-sm outline-none">
+            </div>
+        </form>
+    </section>
+
     <section id="view-counseling" class="hidden fixed inset-0 bg-white z-[200] overflow-y-auto">
         <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
             <button onclick="window.toggleCounselingForm(false)" class="text-slate-400 font-bold">Cancel</button>
@@ -177,10 +216,8 @@
         </form>
     </section>
 
-    <!-- FLOATING ICON -->
     <button onclick="window.toggleCounselingForm(true)" class="fixed bottom-28 right-6 w-16 h-16 bg-emerald-600 text-white rounded-full shadow-2xl z-[80] flex items-center justify-center text-3xl active:scale-90 transition-transform">💬</button>
 
-    <!-- NAVIGATION -->
     <nav class="fixed bottom-0 w-full bg-white/80 backdrop-blur-lg border-t pt-3 pb-8 px-4 z-40 safe-bottom">
         <div class="flex justify-around items-center">
             <button onclick="showView('home')" id="nav-home" class="flex flex-col items-center gap-1 w-1/5 text-blue-600"><span class="text-2xl">🏠</span><span class="text-[9px] font-black uppercase">Home</span></button>
