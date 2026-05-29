@@ -246,6 +246,10 @@
         </div>
     </nav>
 
+    <script type="module">
+        import { env } from "./config.js";
+        window.env = env; // Populates globally before client execution files run
+    </script>
     <script type="module" src="index.js"></script>
 </body>
 </html>
