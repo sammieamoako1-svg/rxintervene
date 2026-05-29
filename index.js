@@ -186,14 +186,12 @@ window.renderHomeList = () => {
         let show = true;
         const itemDate = item.timestamp;
 
-        // Isolate Counseling Entries from normal list feeds
         if (filter === 'Counseling') {
             if (item.ward !== 'Counseling') show = false;
         } else {
             if (item.ward === 'Counseling') show = false;
         }
 
-        // Timeline Filter Evaluation
         if (show && (filter === 'thisMonth' || filter === 'thisYear')) {
             if (!itemDate) {
                 show = false;
@@ -203,7 +201,6 @@ window.renderHomeList = () => {
             }
         }
 
-        // Standard Categorized Attributes Evaluation
         if (show && filter !== 'all' && filter !== 'Counseling' && filter !== 'thisMonth' && filter !== 'thisYear') {
             if (filter === 'followUp') {
                 if (!item.followUp) show = false;
@@ -215,11 +212,21 @@ window.renderHomeList = () => {
         if (show) {
             const colors = { 'Accepted': 'bg-green-100 text-green-700', 'Pending': 'bg-slate-100 text-slate-400', 'Rejected': 'bg-red-100 text-red-700', 'Modified': 'bg-yellow-100 text-yellow-700' };
             const cardDate = itemDate ? itemDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Recent';
-            list.innerHTML += `<div class="bg-white p-5 rounded-[2rem] border mb-3 shadow-sm"><div class="flex justify-between items-center mb-1"><p class="text-[10px] uppercase font-bold text-slate-400">${item.patientId} • ${item.ward}</p><p class="text-[9px] text-slate-400">${cardDate}</p></div><h3 class="font-bold text-sm text-slate-800 mb-2">${item.intervention}</h3><span class="px-2 py-1 rounded-full text-[10px] uppercase font-bold ${colors[item.responseStatus] || 'bg-slate-100 text-slate-700'}">${item.responseStatus}</span></div>`;
+            
+            // Integrated Card Update Action Click Trigger
+            list.innerHTML += `
+                <div onclick="window.openEditModal('${item.id}')" class="bg-white p-5 rounded-[2rem] border mb-3 shadow-sm active:scale-[0.98] transition-transform cursor-pointer">
+                    <div class="flex justify-between items-center mb-1">
+                        <p class="text-[10px] uppercase font-bold text-slate-400">${item.patientId} • ${item.ward}</p>
+                        <p class="text-[9px] text-slate-400">${cardDate}</p>
+                    </div>
+                    <h3 class="font-bold text-sm text-slate-800 mb-2">${item.intervention}</h3>
+                    <span class="px-2 py-1 rounded-full text-[10px] uppercase font-bold ${colors[item.responseStatus] || 'bg-slate-100 text-slate-700'}">${item.responseStatus}</span>
+                </div>`;
         }
         
         if (item.followUp) {
-            fup.innerHTML += `<div class="bg-white p-5 rounded-3xl border-l-4 border-blue-500 mb-3 shadow-sm"><p class="text-[10px] font-bold text-slate-400 uppercase mb-1">${item.patientId}</p><p class="text-sm font-bold text-slate-800">${item.intervention}</p><button onclick="completeFollowUp('${item.id}')" class="w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] mt-2 font-bold uppercase tracking-wider">Done</button></div>`;
+            fup.innerHTML += `<div class="bg-white p-5 rounded-3xl border-l-4 border-blue-500 mb-3 shadow-sm"><p class="text-[10px] font-bold text-slate-400 uppercase mb-1">${item.patientId}</p><p class="text-sm font-bold text-slate-800">${item.intervention}</p><button onclick="completeFollowUp('${item.id}'); event.stopPropagation();" class="w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] mt-2 font-bold uppercase tracking-wider">Done</button></div>`;
         }
     });
     
@@ -227,12 +234,95 @@ window.renderHomeList = () => {
     if(fup.innerHTML === "") fup.innerHTML = `<p class="text-center py-8 text-slate-400 text-xs font-semibold">No active follow-ups.</p>`;
 };
 
-// --- 6. PDF EXPORT CORES ---
+// --- 6. ACTIVITY INLINE CARD EDIT ENGINE ---
+window.openEditModal = (id) => {
+    const item = allInterventions.find(i => i.id === id);
+    if (!item) return;
+
+    document.getElementById('editItemId').value = id;
+    document.getElementById('editPatientId').value = item.patientId || "";
+    document.getElementById('editWard').value = item.ward || "Emergency";
+    document.getElementById('editUrgency').value = item.urgency || "Normal";
+    document.getElementById('editIssue').value = item.issue || "";
+    document.getElementById('editIntervention').value = item.intervention || "";
+    document.getElementById('editResponseStatus').value = item.responseStatus || "Pending";
+    document.getElementById('editNotes').value = item.notes || "";
+    document.getElementById('editModificationNote').value = item.modificationNote || "";
+
+    window.toggleEditModField();
+    document.getElementById('view-edit-modal').classList.remove('hidden');
+};
+
+window.closeEditModal = () => {
+    document.getElementById('view-edit-modal').classList.add('hidden');
+    document.getElementById('editForm').reset();
+};
+
+window.toggleEditModField = () => {
+    const isMod = document.getElementById('editResponseStatus').value === 'Modified';
+    document.getElementById('editModField').classList.toggle('hidden', !isMod);
+};
+
+document.getElementById('editSubmitBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editItemId').value;
+    if (!id) return;
+
+    const updatedData = {
+        patientId: document.getElementById('editPatientId').value,
+        ward: document.getElementById('editWard').value,
+        urgency: document.getElementById('editUrgency').value,
+        issue: document.getElementById('editIssue').value,
+        intervention: document.getElementById('editIntervention').value,
+        responseStatus: document.getElementById('editResponseStatus').value,
+        notes: document.getElementById('editNotes').value || "",
+        modificationNote: document.getElementById('editResponseStatus').value === 'Modified' ? document.getElementById('editModificationNote').value : ""
+    };
+
+    try {
+        await updateDoc(doc(db, "interventions", id), updatedData);
+        window.closeEditModal();
+    } catch (err) { alert("Failed to update: " + err.message); }
+});
+
+// --- 7. HIGH-FIDELITY PRINT & HOME CONTROLS ---
+const sharedPrintStyle = `
+    <style>
+        body { font-family: sans-serif; padding: 40px; margin-bottom: 80px; }
+        .header { border-bottom: 4px solid #2563eb; padding-bottom: 20px; }
+        .counsel-header { border-bottom: 4px solid #10b981; padding-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+        th { text-align: left; background: #f8fafc; padding: 12px; font-size: 10px; color: #64748b; text-transform: uppercase; }
+        .home-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; padding: 12px 24px; border-radius: 50px; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); z-index: 9999; }
+        .home-btn { background: #2563eb; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .home-text { color: #94a3b8; font-family: sans-serif; font-size: 11px; font-weight: 500; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+`;
+
 window.exportToPDF = () => {
     const printWindow = window.open('', '_blank');
     const rows = allInterventions.map(item => `<tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;"><td style="padding: 12px; vertical-align: top;">${item.timestamp?.toLocaleDateString('en-GB') || ''}<br>ID: ${item.patientId}</td><td style="padding: 12px; vertical-align: top;">${item.ward}</td><td style="padding: 12px; vertical-align: top;"><b>${item.intervention}</b><br>Issue: ${item.issue}</td><td style="padding: 12px; vertical-align: top;">${item.responseStatus}</td></tr>`).join('');
-    printWindow.document.write(`<html><head><style>body{font-family:sans-serif; padding:40px;} .header{border-bottom:4px solid #2563eb; padding-bottom:20px;} table{width:100%; border-collapse:collapse; margin-top:30px;} th{text-align:left; background:#f8fafc; padding:12px; font-size:10px; color:#64748b; text-transform:uppercase;}</style></head><body><div class="header"><h1 style="color:#2563eb; margin:0;">RxIntervene Audit</h1><p>UCC Hospital Clinical Pharmacy</p></div><table><thead><tr><th>Date & ID</th><th>Ward</th><th>Clinical Details</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
-    printWindow.document.close(); printWindow.print();
+    
+    printWindow.document.write(`
+        <html>
+            <head>${sharedPrintStyle}</head>
+            <body>
+                <div class="header">
+                    <h1 style="color:#2563eb; margin:0;">RxIntervene Audit</h1>
+                    <p>UCC Hospital Clinical Pharmacy</p>
+                </div>
+                <table>
+                    <thead><tr><th>Date & ID</th><th>Ward</th><th>Clinical Details</th><th>Status</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div class="home-bar no-print">
+                    <span class="home-text">Reviewing Print Layout</span>
+                    <button class="home-btn" onclick="window.close()">🏠 Return to App</button>
+                </div>
+            </body>
+        </html>`);
+    printWindow.document.close();
 };
 
 window.exportCounselingToPDF = async () => {
@@ -244,17 +334,32 @@ window.exportCounselingToPDF = async () => {
         const ds = v.createdAt?.toDate() ? v.createdAt.toDate().toLocaleDateString('en-GB') : '';
         rows += `<tr style="border-bottom:1px solid #e2e8f0; font-size:11px;"><td style="padding:12px; vertical-align:top;">${ds}<br>ID: ${v.patientId}</td><td style="padding:12px; vertical-align:top;"><b>Drugs: ${v.drugs}</b><br>Notes: ${v.notes}</td></tr>`; 
     });
-    printWindow.document.write(`<html><head><style>body{font-family:sans-serif; padding:40px;} .header{border-bottom:4px solid #10b981; padding-bottom:20px;} table{width:100%; border-collapse:collapse; margin-top:30px;} th{text-align:left; background:#f0fdf4; padding:12px; font-size:10px; color:#065f46; text-transform:uppercase;}</style></head><body><div class="header"><h1 style="color:#10b981; margin:0;">Counseling Audit</h1><p>UCC Hospital Clinical Pharmacy</p></div><table><thead><tr><th>Date & ID</th><th>Counseling Details</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
-    printWindow.document.close(); printWindow.print();
+    
+    printWindow.document.write(`
+        <html>
+            <head>${sharedPrintStyle}</head>
+            <body>
+                <div class="counsel-header">
+                    <h1 style="color:#10b981; margin:0;">Counseling Audit</h1>
+                    <p>UCC Hospital Clinical Pharmacy</p>
+                </div>
+                <table>
+                    <thead><tr><th>Date & ID</th><th>Counseling Details</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div class="home-bar no-print">
+                    <span class="home-text">Reviewing Print Layout</span>
+                    <button class="home-btn" style="background:#10b981;" onclick="window.close()">🏠 Return to App</button>
+                </div>
+            </body>
+        </html>`);
+    printWindow.document.close();
 };
 
-// --- 7. DYNAMIC ANALYTICS SYSTEM ---
+// --- 8. DYNAMIC ANALYTICS SYSTEM ---
 window.updateAllCharts = () => {
     const mon = document.getElementById('monthFilter').value;
-    
-    // Clear out Counseling instances from metrics datasets to ensure clinical accuracy
     const activeDataset = allInterventions.filter(i => i.ward !== 'Counseling');
-    
     let filtered = (mon === 'all') ? activeDataset : activeDataset.filter(i => i.timestamp && i.timestamp.getMonth() === parseInt(mon));
     
     const wardData = {}, outcomeData = { Accepted: 0, Rejected: 0, Modified: 0, Pending: 0 }, weekCounts = [0, 0, 0, 0, 0];
@@ -268,7 +373,6 @@ window.updateAllCharts = () => {
     document.getElementById('stat-total').innerText = filtered.length;
     document.getElementById('stat-rate').innerText = filtered.length > 0 ? Math.round((outcomeData.Accepted / filtered.length) * 100) + "%" : "0%";
     
-    // Re-render lifecycle anchors mapping references downstream
     renderChart('wardChart', 'doughnut', Object.keys(wardData), Object.values(wardData));
     renderChart('responseChart', 'bar', ['Acc', 'Rej', 'Mod', 'Pen'], [outcomeData.Accepted, outcomeData.Rejected, outcomeData.Modified, outcomeData.Pending]);
     renderChart('trendChart', 'line', ['W1', 'W2', 'W3', 'W4', 'W5'], weekCounts);
@@ -279,7 +383,6 @@ function renderChart(id, type, labels, data) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     
-    // Lifecycle Destructor: Destroy existing instances before binding to canvas context
     if (id === 'wardChart' && wardChart) { wardChart.destroy(); }
     else if (id === 'responseChart' && responseChart) { responseChart.destroy(); }
     else if (id === 'trendChart' && trendChart) { trendChart.destroy(); }
@@ -301,7 +404,6 @@ function renderChart(id, type, labels, data) {
         } 
     });
 
-    // Cache updated references globally
     if (id === 'wardChart') wardChart = nc;
     else if (id === 'responseChart') responseChart = nc;
     else if (id === 'trendChart') trendChart = nc;
