@@ -112,10 +112,28 @@
 
         <section id="view-setup" class="hidden p-4 space-y-6 pb-32">
             <h2 class="font-extrabold text-xl text-slate-800">Setup</h2>
+            
             <div class="bg-white p-5 rounded-[2.5rem] border border-slate-200 flex items-center gap-4">
                 <div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 text-xl font-black avatar-box">SA</div>
-                <div><h3 class="font-bold text-slate-800" id="display-user-name">Identifying...</h3><p class="text-[10px] font-bold text-slate-400 uppercase" id="display-user-email">Syncing Account...</p></div>
+                <div>
+                    <h3 class="font-bold text-slate-800" id="display-user-name">Identifying...</h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase" id="display-user-email">Syncing Account...</p>
+                </div>
             </div>
+
+            <div class="bg-slate-950 rounded-[2.5rem] p-6 text-white space-y-4 shadow-xl">
+                <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                    <div>
+                        <h3 class="font-black text-sm tracking-tight">AI Clinical Audit Engine</h3>
+                        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Automated Institutional Reports</p>
+                    </div>
+                    <button onclick="window.generateAiAuditReport()" id="aiAuditBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-wider px-4 py-2.5 rounded-xl transition-colors">✨ Run Audit</button>
+                </div>
+                
+                <div id="ai-audit-output" class="hidden text-xs leading-relaxed font-medium text-slate-200 space-y-3 max-h-64 overflow-y-auto pr-1 hide-scrollbar">
+                    </div>
+            </div>
+
             <div class="bg-slate-50 rounded-[2.5rem] p-4 space-y-3">
                 <button onclick="window.exportToPDF()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg">Export Interventions</button>
                 <button onclick="window.exportCounselingToPDF()" class="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg">Export Counseling Notes</button>
