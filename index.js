@@ -41,10 +41,10 @@ onAuthStateChanged(auth, (user) => {
         if (user.email === "stephen.jalley@ucc.edu.gh") { displayName = "Dr. Stephen Jalley"; initials = "SJ"; }
         else if (user.email === "sammieamoako@gmail.com") { displayName = "Dr. Samuel Amoako"; initials = "SA"; }
         else if (user.email === "torihammond68@gmail.com") { displayName = "Dr. Victoria Hammond"; initials = "VH"; }
-        else if (user.email === "adelaide-ampofo-asiama@ucc.edu.gh") { displayName = "Dr. Adelaide Ampofo-Asiama"; initials = "BOSS"; }
+        else if (user.email === "adelaide-ampofo-asiama@ucc.edu.gh") { displayName = "Dr. Adelaide Ampofo-Asiama"; initials = "BA"; }
         
-        nameDisplay.innerText = displayName;
-        avatarDisplay.innerText = initials;
+        if (nameDisplay) nameDisplay.innerText = displayName;
+        if (avatarDisplay) avatarDisplay.innerText = initials;
         initApp();
         showView('home');
     } else {
@@ -71,6 +71,7 @@ window.handleResetPassword = async () => {
 // --- 3. HIGH-FIDELITY RAG (WINDOWED RETRIEVAL) ---
 async function getBnfContext(issueText) {
     const target = issueText.toLowerCase().split(/\W+/).filter(w => w.length > 3).sort((a,b) => b.length - a.length)[0];
+    if (!target) return "";
     const q = query(collection(db, "clinical_knowledge"), orderBy("chunk_index"), limit(5000));
     const snap = await getDocs(q);
     let all = []; snap.forEach(d => all.push(d.data()));
@@ -94,19 +95,42 @@ window.applyAiSuggestion = () => { document.getElementById('intervention').value
 
 // --- 4. NAVIGATION & COUNSELING ---
 window.showView = (name) => {
-    ['home', 'analytics', 'form', 'followup', 'setup'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
-    document.getElementById(`view-${name}`).classList.remove('hidden');
-    document.querySelectorAll('nav button').forEach(b => b.classList.replace('text-blue-600', 'text-slate-300'));
-    document.getElementById(`nav-${name}`)?.classList.replace('text-slate-300', 'text-blue-600');
+    ['home', 'analytics', 'form', 'followup', 'setup'].forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.add('hidden');
+    });
+    const targetView = document.getElementById(`view-${name}`);
+    if (targetView) targetView.classList.remove('hidden');
+    
+    document.querySelectorAll('nav button').forEach(b => {
+        if (b.classList.contains('text-blue-600')) b.classList.replace('text-blue-600', 'text-slate-300');
+    });
+    const activeNav = document.getElementById(`nav-${name}`);
+    if (activeNav) activeNav.classList.replace('text-slate-300', 'text-blue-600');
 };
 
 window.toggleCounselingForm = (show) => { document.getElementById('view-counseling').classList.toggle('hidden', !show); };
 
 document.getElementById('counselingForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const data = { patientId: document.getElementById('counselPatientId').value, drugs: document.getElementById('counselDrugs').value, notes: document.getElementById('counselNotes').value, userId: auth.currentUser.uid, createdAt: serverTimestamp() };
+    const data = { 
+        patientId: document.getElementById('counselPatientId').value, 
+        drugs: document.getElementById('counselDrugs').value, 
+        notes: document.getElementById('counselNotes').value, 
+        userId: auth.currentUser.uid, 
+        createdAt: serverTimestamp() 
+    };
     await addDoc(collection(db, "counseling"), data);
-    await addDoc(collection(db, "interventions"), { patientId: data.patientId, ward: "Counseling", urgency: "Normal", issue: "Patient Counseling", intervention: `Counseling: ${data.drugs}`, responseStatus: "Accepted", userId: auth.currentUser.uid, createdAt: serverTimestamp() });
+    await addDoc(collection(db, "interventions"), { 
+        patientId: data.patientId, 
+        ward: "Counseling", 
+        urgency: "Normal", 
+        issue: "Patient Counseling", 
+        intervention: `Counseling: ${data.drugs}`, 
+        responseStatus: "Accepted", 
+        userId: auth.currentUser.uid, 
+        createdAt: serverTimestamp() 
+    });
     e.target.reset(); window.toggleCounselingForm(false);
 });
 
@@ -117,38 +141,93 @@ window.completeFollowUp = async (id) => { await updateDoc(doc(db, "interventions
 
 document.getElementById('interventionForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const data = { patientId: document.getElementById('patientId').value, ward: document.getElementById('ward').value, urgency: document.getElementById('urgency').value, issue: document.getElementById('issue').value, intervention: document.getElementById('intervention').value, responseStatus: document.getElementById('responseStatus').value, modificationNote: document.getElementById('modificationNote').value || "", notes: document.getElementById('notes').value || "", followUp: document.getElementById('followUp').checked, userId: auth.currentUser.uid, createdAt: serverTimestamp() };
-    await addDoc(collection(db, "interventions"), data); e.target.reset(); showView('home');
+    const data = { 
+        patientId: document.getElementById('patientId').value, 
+        ward: document.getElementById('ward').value, 
+        urgency: document.getElementById('urgency').value, 
+        issue: document.getElementById('issue').value, 
+        intervention: document.getElementById('intervention').value, 
+        responseStatus: document.getElementById('responseStatus').value, 
+        modificationNote: document.getElementById('modificationNote').value || "", 
+        notes: document.getElementById('notes').value || "", 
+        followUp: document.getElementById('followUp').checked, 
+        userId: auth.currentUser.uid, 
+        createdAt: serverTimestamp() 
+    };
+    await addDoc(collection(db, "interventions"), data); 
+    e.target.reset(); 
+    showView('home');
 });
 
 const initApp = () => {
     const q = query(collection(db, "interventions"), orderBy("createdAt", "desc"));
     unsubscribeSnapshot = onSnapshot(q, (snap) => {
-        allInterventions = []; snap.forEach(d => allInterventions.push({ ...d.data(), timestamp: d.data().createdAt?.toDate(), id: d.id }));
-        window.renderHomeList(); window.updateAllCharts();
+        allInterventions = []; 
+        snap.forEach(d => {
+            const data = d.data();
+            allInterventions.push({ ...data, timestamp: data.createdAt?.toDate(), id: d.id });
+        });
+        window.renderHomeList(); 
+        window.updateAllCharts();
     });
 };
 
 window.renderHomeList = () => {
-    const filter = document.getElementById('homeFilter').value, list = document.getElementById('intervention-list'), fup = document.getElementById('followup-list-today');
+    const filter = document.getElementById('homeFilter').value;
+    const list = document.getElementById('intervention-list');
+    const fup = document.getElementById('followup-list-today');
     list.innerHTML = ""; fup.innerHTML = "";
+    
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
     allInterventions.forEach(item => {
         let show = true;
-        if (filter === 'Counseling') { if (item.ward !== 'Counseling') show = false; }
-        else if (filter !== 'all' && filter !== 'followUp' && item.responseStatus !== filter) show = false;
-        else if (filter === 'followUp' && !item.followUp) show = false;
+        const itemDate = item.timestamp;
+
+        // Isolate Counseling Entries from normal list feeds
+        if (filter === 'Counseling') {
+            if (item.ward !== 'Counseling') show = false;
+        } else {
+            if (item.ward === 'Counseling') show = false;
+        }
+
+        // Timeline Filter Evaluation
+        if (show && (filter === 'thisMonth' || filter === 'thisYear')) {
+            if (!itemDate) {
+                show = false;
+            } else {
+                if (filter === 'thisMonth' && (itemDate.getMonth() !== currentMonth || itemDate.getFullYear() !== currentYear)) show = false;
+                if (filter === 'thisYear' && itemDate.getFullYear() !== currentYear) show = false;
+            }
+        }
+
+        // Standard Categorized Attributes Evaluation
+        if (show && filter !== 'all' && filter !== 'Counseling' && filter !== 'thisMonth' && filter !== 'thisYear') {
+            if (filter === 'followUp') {
+                if (!item.followUp) show = false;
+            } else if (item.responseStatus !== filter) {
+                show = false;
+            }
+        }
 
         if (show) {
             const colors = { 'Accepted': 'bg-green-100 text-green-700', 'Pending': 'bg-slate-100 text-slate-400', 'Rejected': 'bg-red-100 text-red-700', 'Modified': 'bg-yellow-100 text-yellow-700' };
-            list.innerHTML += `<div class="bg-white p-5 rounded-[2rem] border mb-3"><p class="text-[10px] uppercase text-slate-400">${item.patientId} • ${item.ward}</p><h3 class="font-bold text-sm">${item.intervention}</h3><span class="px-2 py-1 rounded-full text-[10px] uppercase ${colors[item.responseStatus]}">${item.responseStatus}</span></div>`;
+            const cardDate = itemDate ? itemDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Recent';
+            list.innerHTML += `<div class="bg-white p-5 rounded-[2rem] border mb-3 shadow-sm"><div class="flex justify-between items-center mb-1"><p class="text-[10px] uppercase font-bold text-slate-400">${item.patientId} • ${item.ward}</p><p class="text-[9px] text-slate-400">${cardDate}</p></div><h3 class="font-bold text-sm text-slate-800 mb-2">${item.intervention}</h3><span class="px-2 py-1 rounded-full text-[10px] uppercase font-bold ${colors[item.responseStatus] || 'bg-slate-100 text-slate-700'}">${item.responseStatus}</span></div>`;
         }
+        
         if (item.followUp) {
-            fup.innerHTML += `<div class="bg-white p-5 rounded-3xl border-l-4 border-blue-500 mb-3"><p class="text-sm font-bold">${item.intervention}</p><button onclick="completeFollowUp('${item.id}')" class="w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] mt-2">Done</button></div>`;
+            fup.innerHTML += `<div class="bg-white p-5 rounded-3xl border-l-4 border-blue-500 mb-3 shadow-sm"><p class="text-[10px] font-bold text-slate-400 uppercase mb-1">${item.patientId}</p><p class="text-sm font-bold text-slate-800">${item.intervention}</p><button onclick="completeFollowUp('${item.id}')" class="w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] mt-2 font-bold uppercase tracking-wider">Done</button></div>`;
         }
     });
+    
+    if(list.innerHTML === "") list.innerHTML = `<p class="text-center py-8 text-slate-400 text-xs font-semibold">No interventions found.</p>`;
+    if(fup.innerHTML === "") fup.innerHTML = `<p class="text-center py-8 text-slate-400 text-xs font-semibold">No active follow-ups.</p>`;
 };
 
-// --- 6. ORIGINAL PDF EXPORT TEMPLATES ---
+// --- 6. PDF EXPORT CORES ---
 window.exportToPDF = () => {
     const printWindow = window.open('', '_blank');
     const rows = allInterventions.map(item => `<tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;"><td style="padding: 12px; vertical-align: top;">${item.timestamp?.toLocaleDateString('en-GB') || ''}<br>ID: ${item.patientId}</td><td style="padding: 12px; vertical-align: top;">${item.ward}</td><td style="padding: 12px; vertical-align: top;"><b>${item.intervention}</b><br>Issue: ${item.issue}</td><td style="padding: 12px; vertical-align: top;">${item.responseStatus}</td></tr>`).join('');
@@ -159,29 +238,73 @@ window.exportToPDF = () => {
 window.exportCounselingToPDF = async () => {
     const snap = await getDocs(query(collection(db, "counseling"), orderBy("createdAt", "desc")));
     const printWindow = window.open('', '_blank');
-    let rows = ""; snap.forEach(d => { const v = d.data(); rows += `<tr style="border-bottom:1px solid #e2e8f0; font-size:11px;"><td style="padding:12px;">${v.createdAt?.toDate().toLocaleDateString('en-GB') || ''}<br>ID: ${v.patientId}</td><td style="padding:12px;"><b>Drugs: ${v.drugs}</b><br>Notes: ${v.notes}</td></tr>`; });
+    let rows = ""; 
+    snap.forEach(d => { 
+        const v = d.data(); 
+        const ds = v.createdAt?.toDate() ? v.createdAt.toDate().toLocaleDateString('en-GB') : '';
+        rows += `<tr style="border-bottom:1px solid #e2e8f0; font-size:11px;"><td style="padding:12px; vertical-align:top;">${ds}<br>ID: ${v.patientId}</td><td style="padding:12px; vertical-align:top;"><b>Drugs: ${v.drugs}</b><br>Notes: ${v.notes}</td></tr>`; 
+    });
     printWindow.document.write(`<html><head><style>body{font-family:sans-serif; padding:40px;} .header{border-bottom:4px solid #10b981; padding-bottom:20px;} table{width:100%; border-collapse:collapse; margin-top:30px;} th{text-align:left; background:#f0fdf4; padding:12px; font-size:10px; color:#065f46; text-transform:uppercase;}</style></head><body><div class="header"><h1 style="color:#10b981; margin:0;">Counseling Audit</h1><p>UCC Hospital Clinical Pharmacy</p></div><table><thead><tr><th>Date & ID</th><th>Counseling Details</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
     printWindow.document.close(); printWindow.print();
 };
 
+// --- 7. DYNAMIC ANALYTICS SYSTEM ---
 window.updateAllCharts = () => {
     const mon = document.getElementById('monthFilter').value;
-    let filtered = (mon === 'all') ? allInterventions : allInterventions.filter(i => i.timestamp && i.timestamp.getMonth() === parseInt(mon));
+    
+    // Clear out Counseling instances from metrics datasets to ensure clinical accuracy
+    const activeDataset = allInterventions.filter(i => i.ward !== 'Counseling');
+    
+    let filtered = (mon === 'all') ? activeDataset : activeDataset.filter(i => i.timestamp && i.timestamp.getMonth() === parseInt(mon));
+    
     const wardData = {}, outcomeData = { Accepted: 0, Rejected: 0, Modified: 0, Pending: 0 }, weekCounts = [0, 0, 0, 0, 0];
-    filtered.forEach(i => { wardData[i.ward] = (wardData[i.ward] || 0) + 1; if (outcomeData.hasOwnProperty(i.responseStatus)) outcomeData[i.responseStatus]++; if (i.timestamp) weekCounts[Math.min(Math.floor((i.timestamp.getDate() - 1) / 7), 4)]++; });
+    
+    filtered.forEach(i => { 
+        wardData[i.ward] = (wardData[i.ward] || 0) + 1; 
+        if (outcomeData.hasOwnProperty(i.responseStatus)) outcomeData[i.responseStatus]++; 
+        if (i.timestamp) weekCounts[Math.min(Math.floor((i.timestamp.getDate() - 1) / 7), 4)]++; 
+    });
+    
     document.getElementById('stat-total').innerText = filtered.length;
     document.getElementById('stat-rate').innerText = filtered.length > 0 ? Math.round((outcomeData.Accepted / filtered.length) * 100) + "%" : "0%";
+    
+    // Re-render lifecycle anchors mapping references downstream
     renderChart('wardChart', 'doughnut', Object.keys(wardData), Object.values(wardData));
     renderChart('responseChart', 'bar', ['Acc', 'Rej', 'Mod', 'Pen'], [outcomeData.Accepted, outcomeData.Rejected, outcomeData.Modified, outcomeData.Pending]);
     renderChart('trendChart', 'line', ['W1', 'W2', 'W3', 'W4', 'W5'], weekCounts);
 };
 
 function renderChart(id, type, labels, data) {
-    const ctx = document.getElementById(id).getContext('2d');
-    const nc = new Chart(ctx, { type, data: { labels, datasets: [{ data, backgroundColor: id === 'responseChart' ? ['#22c55e', '#ef4444', '#f59e0b', '#94a3b8'] : ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bae6fd'], tension: 0.4 }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 8 } } } } } });
-    if (id === 'wardChart') { if (wardChart) wardChart.destroy(); wardChart = nc; }
-    else if (id === 'responseChart') { if (responseChart) responseChart.destroy(); responseChart = nc; }
-    else { if (trendChart) trendChart.destroy(); trendChart = nc; }
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Lifecycle Destructor: Destroy existing instances before binding to canvas context
+    if (id === 'wardChart' && wardChart) { wardChart.destroy(); }
+    else if (id === 'responseChart' && responseChart) { responseChart.destroy(); }
+    else if (id === 'trendChart' && trendChart) { trendChart.destroy(); }
+
+    const nc = new Chart(ctx, { 
+        type, 
+        data: { 
+            labels, 
+            datasets: [{ 
+                data, 
+                backgroundColor: id === 'responseChart' ? ['#22c55e', '#ef4444', '#f59e0b', '#94a3b8'] : ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bae6fd'], 
+                tension: 0.4 
+            }] 
+        }, 
+        options: { 
+            maintainAspectRatio: false, 
+            plugins: { legend: { display: false } }, 
+            scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 8 } } } } 
+        } 
+    });
+
+    // Cache updated references globally
+    if (id === 'wardChart') wardChart = nc;
+    else if (id === 'responseChart') responseChart = nc;
+    else if (id === 'trendChart') trendChart = nc;
 }
 
 document.addEventListener('keyup', (e) => { if (e.target.id === 'issue') document.getElementById('ai-trigger').classList.toggle('hidden', e.target.value.length < 5); });
