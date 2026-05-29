@@ -213,7 +213,6 @@ window.renderHomeList = () => {
             const colors = { 'Accepted': 'bg-green-100 text-green-700', 'Pending': 'bg-slate-100 text-slate-400', 'Rejected': 'bg-red-100 text-red-700', 'Modified': 'bg-yellow-100 text-yellow-700' };
             const cardDate = itemDate ? itemDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Recent';
             
-            // Integrated Card Update Action Click Trigger
             list.innerHTML += `
                 <div onclick="window.openEditModal('${item.id}')" class="bg-white p-5 rounded-[2rem] border mb-3 shadow-sm active:scale-[0.98] transition-transform cursor-pointer">
                     <div class="flex justify-between items-center mb-1">
@@ -408,5 +407,105 @@ function renderChart(id, type, labels, data) {
     else if (id === 'responseChart') responseChart = nc;
     else if (id === 'trendChart') trendChart = nc;
 }
+
+// --- 9. AI INSTITUTIONAL STATISTICAL AUDIT ENGINE (SETUP BASED) ---
+window.generateAiAuditReport = async () => {
+    const btn = document.getElementById('aiAuditBtn');
+    const outputBox = document.getElementById('ai-audit-output');
+    
+    const now = new Date();
+    const currentMonthNum = now.getMonth();
+    const currentMonthLabel = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+    const activeDataset = allInterventions.filter(i => i.ward !== 'Counseling');
+    let filteredRecords = activeDataset.filter(i => i.timestamp && i.timestamp.getMonth() === currentMonthNum && i.timestamp.getFullYear() === now.getFullYear());
+
+    if (filteredRecords.length === 0) {
+        alert(`No intervention records logged yet for ${currentMonthLabel} to perform an audit summary.`);
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Analyzing...";
+    outputBox.classList.remove('hidden');
+    outputBox.innerHTML = `<div class="flex items-center gap-2 text-slate-400 py-4"><span class="animate-spin text-sm">⏳</span> Aggregating clinical metadata for ${currentMonthLabel}...</div>`;
+
+    const anonymousLogPayload = filteredRecords.map((r, index) => {
+        return `${index + 1}. Ward: ${r.ward} | Issue: ${r.issue} | Proposed Intervention: ${r.intervention} | Status: ${r.responseStatus} ${r.modificationNote ? `(Changes: ${r.modificationNote})` : ''}`;
+    }).join('\n');
+
+    const auditPrompt = `
+        You are acting as a Chief Clinical Pharmacist and Institutional Health Informatics Auditor.
+        Analyze the following log of clinical interventions performed at UCC Hospital during the period: ${currentMonthLabel}.
+        
+        DATASET LOGS:
+        ${anonymousLogPayload}
+        
+        TASK:
+        Generate a highly professional, well-structured institutional governance audit report. Use bold lines or headers for readability. Focus strictly on tracking clinical patterns, systemic workflow vulnerabilities across wards, and team acceptance trends.
+        
+        THE FORMAT MUST INCLUDE:
+        1. ### EXECUTIVE SUMMARY
+           - Total clinical interventions verified for this period.
+           - High-level evaluation of overall clinical safety impact.
+2. ### WARD VULNERABILITIES & MEDICATIONS TRENDS
+           - Trace precisely which wards are generating the highest frequency of errors or intervention needs.
+           - Identify the predominant categories of clinical issues seen in the logs.
+3. ### CLINICAL ACTIONS & RECOMMENDATIONS
+           - Provide 2 to 3 actionable, clear strategies hospital leadership can implement immediately to prevent these common mistakes from recurring.
+           
+        Keep the tone authoritative, clinical, crisp, and objective. Do not include casual pleasantries or meta-commentary.
+    `;
+
+    try {
+        const response = await aiModel.generateContent(auditPrompt);
+        let reportText = response.response.text();
+
+        let cleanHtmlReport = reportText
+            .replace(/\n/g, '<br>')
+            .replace(/### (EXECUTIVE SUMMARY|WARD VULNERABILITIES & MEDICATIONS TRENDS|CLINICAL ACTIONS & RECOMMENDATIONS)/g, '<br><h4 class="text-blue-400 font-extrabold text-xs tracking-tight border-b border-white/5 pb-1 uppercase">$1</h4>')
+            .replace(/- /g, '<span class="text-blue-500 font-bold mr-1">▪</span> ');
+
+        outputBox.innerHTML = `
+            <div class="prose prose-invert max-w-none space-y-2 text-slate-300 animate-fadeIn">
+                ${cleanHtmlReport}
+            </div>
+            <button onclick="window.printAiAudit('${currentMonthLabel}')" class="w-full mt-4 py-3 bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all no-print">🖨️ Print Governance Report</button>
+        `;
+    } catch (error) {
+        outputBox.innerHTML = `<div class="text-red-400 font-bold py-2">⚠️ Audit Processing Failed. Check connectivity profiles.</div>`;
+        console.error(error);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "✨ Run Audit";
+    }
+};
+
+window.printAiAudit = (period) => {
+    const reportContent = document.getElementById('ai-audit-output').innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <style>
+                    body { font-family: sans-serif; padding: 45px; max-width: 800px; margin: 0 auto; color: #1e293b; }
+                    .header { border-bottom: 4px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; }
+                    h4 { color: #1e3a8a; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 25px; }
+                    div { font-size: 12px; line-height: 1.6; }
+                    .no-print { display: none !important; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1 style="margin:0; font-size:22px; color:#1e3a8a;">AI Clinical Governance Audit</h1>
+                    <p style="margin:5px 0 0 0; font-size:11px; color:#64748b; font-weight:bold;">UCC Hospital Pharmacy Department • Active Frame: ${period}</p>
+                </div>
+                <div>${reportContent}</div>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+};
 
 document.addEventListener('keyup', (e) => { if (e.target.id === 'issue') document.getElementById('ai-trigger').classList.toggle('hidden', e.target.value.length < 5); });
