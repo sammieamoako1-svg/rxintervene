@@ -4,8 +4,9 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, on
 import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
 // --- 1. INITIALIZATION ---
+// Dynamically extracts runtime access credentials from the config.js environment layer
 const firebaseConfig = {
-    apiKey: "AIzaSyDIQgRQm5GTUWKbPWmqc_c62mDAB6JETJs",
+    apiKey: window.env?.FIREBASE_API_KEY || "", 
     authDomain: "rxintervene-f95ce.firebaseapp.com",
     projectId: "rxintervene-f95ce",
     storageBucket: "rxintervene-f95ce.firebasestorage.app",
@@ -17,8 +18,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const aiModel = new GoogleGenerativeAI("AIzaSyANCStxyHo879glhuzYTzvazrB-64JUZkY").getGenerativeModel({ 
-    model: "gemini-3.1-flash-lite",
+
+// Uses the stable GA production model endpoint to bypass preview version deprecation
+const aiModel = new GoogleGenerativeAI(window.env?.GEMINI_API_KEY || "").getGenerativeModel({ 
+    model: "gemini-3.1-flash-lite", 
     safetySettings: [{ category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }]
 });
 
@@ -448,10 +451,10 @@ window.generateAiAuditReport = async () => {
         1. ### EXECUTIVE SUMMARY
            - Total clinical interventions verified for this period.
            - High-level evaluation of overall clinical safety impact.
-2. ### WARD VULNERABILITIES & MEDICATIONS TRENDS
+        2. ### WARD VULNERABILITIES & MEDICATIONS TRENDS
            - Trace precisely which wards are generating the highest frequency of errors or intervention needs.
            - Identify the predominant categories of clinical issues seen in the logs.
-3. ### CLINICAL ACTIONS & RECOMMENDATIONS
+        3. ### CLINICAL ACTIONS & RECOMMENDATIONS
            - Provide 2 to 3 actionable, clear strategies hospital leadership can implement immediately to prevent these common mistakes from recurring.
            
         Keep the tone authoritative, clinical, crisp, and objective. Do not include casual pleasantries or meta-commentary.
