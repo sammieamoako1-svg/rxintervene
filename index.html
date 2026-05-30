@@ -17,11 +17,13 @@
         .theme-transition { transition: all 0.3s ease; }
         #submitBtn:active, #counselingSubmitBtn:active, #editSubmitBtn:active { transform: scale(0.95); opacity: 0.8; }
         .bnf-content b { color: #1d4ed8; display: block; margin-top: 10px; }
+        .auto-resize { resize: none; overflow-y: hidden; transition: height 0.1s ease-out; }
     </style>
     <link rel="manifest" href="manifest.json">
 </head>
 <body class="bg-slate-50 h-screen flex flex-col overflow-hidden text-slate-900">
 
+    <!-- AUTHENTICATION VIEW -->
     <section id="view-auth" class="fixed inset-0 bg-white z-[100] flex flex-col p-8 space-y-6">
         <div class="mt-12 text-center">
             <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center shadow-xl shadow-blue-100 mb-4 theme-transition">
@@ -48,6 +50,7 @@
         </div>
     </section>
 
+    <!-- HEADER WITH PRESENTATION PRIVACY ACTION LOCKS -->
     <header class="bg-white px-6 py-4 shadow-sm border-b z-10 flex justify-between items-center">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-100 theme-transition header-icon">
@@ -60,14 +63,16 @@
         </div>
         <div class="flex items-center gap-2">
             <button onclick="window.togglePrivacyMask()" id="privacyToggleBtn" class="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-sm active:scale-90 transition-transform select-none" title="Toggle Demo Privacy Mask">
-                A🔓
+                🔓
             </button>
             <button onclick="showView('setup')" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-sm border border-slate-200 active:scale-90 transition-transform">👤</button>
         </div>
     </header>
 
+    <!-- MAIN SCROLLABLE CONTENT -->
     <main class="flex-1 overflow-y-auto pb-32 hide-scrollbar">
         
+        <!-- HOME / ACTIVITY VIEW -->
         <section id="view-home" class="p-4 space-y-3">
             <div class="flex justify-between items-center px-1 mb-2">
                 <h2 class="font-extrabold text-xl text-slate-800">Activity</h2>
@@ -87,6 +92,7 @@
             <div id="intervention-list" class="space-y-4"></div>
         </section>
 
+        <!-- FOLLOW-UP VIEW -->
         <section id="view-followup" class="hidden p-4 space-y-4 pb-32">
             <div class="flex justify-between items-center px-1">
                 <h2 class="font-extrabold text-xl text-slate-800">Follow-ups</h2>
@@ -95,6 +101,7 @@
             <div id="followup-list-today" class="space-y-4"></div>
         </section>
 
+        <!-- ANALYTICS VIEW -->
         <section id="view-analytics" class="hidden p-4 space-y-4 pb-32">
             <div class="flex justify-between items-center px-1">
                 <h2 class="font-extrabold text-xl text-slate-800">Analytics</h2>
@@ -115,9 +122,11 @@
             </div>
         </section>
 
+        <!-- SETUP / SETTINGS VIEW -->
         <section id="view-setup" class="hidden p-4 space-y-6 pb-32">
             <h2 class="font-extrabold text-xl text-slate-800">Setup</h2>
             
+            <!-- User Profile Card -->
             <div class="bg-white p-5 rounded-[2.5rem] border border-slate-200 flex items-center gap-4">
                 <div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 text-xl font-black avatar-box">SA</div>
                 <div>
@@ -126,6 +135,7 @@
                 </div>
             </div>
 
+            <!-- AI GENERATED AUDIT WORKSPACE -->
             <div class="bg-slate-950 rounded-[2.5rem] p-6 text-white space-y-4 shadow-xl">
                 <div class="flex justify-between items-center border-b border-white/10 pb-3">
                     <div>
@@ -135,10 +145,10 @@
                     <button onclick="window.generateAiAuditReport()" id="aiAuditBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-wider px-4 py-2.5 rounded-xl transition-colors">✨ Run Audit</button>
                 </div>
                 
-                <div id="ai-audit-output" class="hidden text-xs leading-relaxed font-medium text-slate-200 space-y-4 max-h-96 overflow-y-auto pr-1 hide-scrollbar">
-                    </div>
+                <div id="ai-audit-output" class="hidden text-xs leading-relaxed font-medium text-slate-200 space-y-4 max-h-96 overflow-y-auto pr-1 hide-scrollbar"></div>
             </div>
 
+            <!-- Standard Administrative Actions & PWA Installation Interface -->
             <div class="bg-slate-50 rounded-[2.5rem] p-4 space-y-3">
                 <button id="pwaInstallBtn" class="hidden w-full py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 animate-pulse">
                     📲 Install RxIntervene App
@@ -150,6 +160,7 @@
         </section>
     </main>
 
+    <!-- INTERVENTION FORM -->
     <section id="view-form" class="hidden fixed inset-0 bg-white z-[60] overflow-y-auto">
         <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
             <button onclick="showView('home')" class="text-slate-400 font-bold">Cancel</button>
@@ -171,7 +182,9 @@
                 <select id="urgency" class="p-3 bg-slate-100 rounded-xl font-bold text-sm outline-none"><option>Normal</option><option>High</option><option>Stat</option></select>
             </div>
             <input type="text" id="issue" placeholder="The Issue" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-sm">
-            <textarea id="intervention" placeholder="Intervention" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-sm h-24"></textarea>
+            
+            <textarea id="intervention" placeholder="Intervention" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-sm min-h-[96px] auto-resize"></textarea>
+            
             <div class="bg-blue-600 rounded-[2rem] p-6 text-white space-y-4">
                 <select id="responseStatus" onchange="window.toggleModField()" class="w-full p-3 rounded-xl bg-white/20 border border-white/30 text-white font-bold outline-none">
                     <option class="text-slate-900" value="Pending">Pending</option><option class="text-slate-900" value="Accepted">Accepted</option><option class="text-slate-900" value="Modified">Modified</option><option class="text-slate-900" value="Rejected">Rejected</option>
@@ -183,6 +196,7 @@
         </form>
     </section>
 
+    <!-- EDIT ENTRY MODAL -->
     <section id="view-edit-modal" class="hidden fixed inset-0 bg-white z-[250] overflow-y-auto">
         <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
             <button onclick="window.closeEditModal()" class="text-slate-400 font-bold">Cancel</button>
@@ -209,7 +223,7 @@
 
             <div class="space-y-1">
                 <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Pharmacist Intervention</label>
-                <textarea id="editIntervention" placeholder="Intervention" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-sm h-24"></textarea>
+                <textarea id="editIntervention" placeholder="Intervention" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-sm min-h-[96px] auto-resize"></textarea>
             </div>
             
             <div class="bg-amber-600 rounded-[2rem] p-6 text-white space-y-4">
@@ -225,6 +239,15 @@
                 <input type="text" id="editNotes" placeholder="General Clinical Notes" class="w-full p-3 rounded-xl bg-white/20 text-white text-sm outline-none">
             </div>
 
+            <!-- Spliced Default OS Alarm Trigger Integration Checkbox -->
+            <div class="flex items-center justify-between p-5 bg-slate-100 rounded-[2rem]">
+                <div>
+                    <span class="font-bold text-sm block">Re-trigger System Alarm</span>
+                    <span class="text-[9px] text-slate-400 font-bold uppercase block mt-0.5">Opens default phone reminder</span>
+                </div>
+                <input type="checkbox" id="editFollowUp" class="w-6 h-6">
+            </div>
+
             <div class="pt-6 border-t border-slate-100 mt-6">
                 <button type="button" onclick="window.deleteCurrentRecord()" class="w-full py-4 border-2 border-red-100 text-red-500 hover:bg-red-50 rounded-2xl font-black text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
                     🗑️ Delete Record Permanently
@@ -233,6 +256,7 @@
         </form>
     </section>
 
+    <!-- COUNSELING MODAL -->
     <section id="view-counseling" class="hidden fixed inset-0 bg-white z-[200] overflow-y-auto">
         <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
             <button onclick="window.toggleCounselingForm(false)" class="text-slate-400 font-bold">Cancel</button>
@@ -248,8 +272,10 @@
         </form>
     </section>
 
+    <!-- FLOATING COUNSELING ICON -->
     <button onclick="window.toggleCounselingForm(true)" class="fixed bottom-28 right-6 w-16 h-16 bg-emerald-600 text-white rounded-full shadow-2xl z-[80] flex items-center justify-center text-3xl active:scale-90 transition-transform">💬</button>
 
+    <!-- NAVIGATION -->
     <nav class="fixed bottom-0 w-full bg-white/80 backdrop-blur-lg border-t pt-3 pb-8 px-4 z-40 safe-bottom">
         <div class="flex justify-around items-center">
             <button onclick="showView('home')" id="nav-home" class="flex flex-col items-center gap-1 w-1/5 text-blue-600"><span class="text-2xl">🏠</span><span class="text-[9px] font-black uppercase">Home</span></button>
