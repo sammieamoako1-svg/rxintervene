@@ -64,15 +64,12 @@ document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => 
 
 // --- NATIVE REMINDER INTEGRATION ENGINE ---
 window.triggerNativeCalendarReminder = (patientId, ward, interventionNotes) => {
-    // Encodes strings securely to follow valid web URI parameters
     const encodedTitle = encodeURIComponent(`💊 RxIntervene Review: ${patientId}`);
     const compiledBody = `Patient ID: ${patientId}\nHospital Ward Location: ${ward}\n\nClinical Intervention Profile Notes:\n${interventionNotes}\n\n---\nLogged securely via RxIntervene Workspace.`;
     const encodedDetails = encodeURIComponent(compiledBody);
     
-    // Builds the dynamic system layout template for Google's native calendar engine
     const googleCalendarIntentUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodedTitle}&details=${encodedDetails}`;
     
-    // Commands the phone or desktop operating system to open the default app framework
     window.open(googleCalendarIntentUrl, '_blank');
 };
 
@@ -188,12 +185,12 @@ document.getElementById('counselingForm').addEventListener('submit', async (e) =
     e.target.reset(); window.toggleCounselingForm(false);
 });
 
-// --- 5. CORE ACTIONS & ENTRY INGESTION ---
+// --- 5. CORE ACTIONS & ENTRY INGESTION (OPTIMIZED REMINDER PIPELINE) ---
 window.toggleModField = () => { document.getElementById('modField').classList.toggle('hidden', document.getElementById('responseStatus').value !== 'Modified'); };
 
 window.completeFollowUp = async (id) => { await updateDoc(doc(db, "interventions", id), { followUp: false }); };
 
-document.getElementById('interventionForm').addEventListener('submit', async (e) => {
+document.getElementById('interventionForm').addEventListener('submit', (e) => {
     e.preventDefault();
     
     const isFollowUpChecked = document.getElementById('followUp').checked;
@@ -215,15 +212,16 @@ document.getElementById('interventionForm').addEventListener('submit', async (e)
         createdAt: serverTimestamp() 
     };
     
-    await addDoc(collection(db, "interventions"), data); 
-    e.target.reset(); 
-    window.autoResizeInput(document.getElementById('intervention')); 
+    // Background execution keeps UI transitions smooth
+    addDoc(collection(db, "interventions"), data).catch(err => console.error("Database save crash:", err)); 
     
-    // Intercept thread: Runs calendar injection prompt seamlessly if review flag configuration matches
+    // Bypasses popup-blockers completely by triggering before view switches
     if (isFollowUpChecked) {
         window.triggerNativeCalendarReminder(patientId, ward, intervention);
     }
-    
+
+    e.target.reset(); 
+    window.autoResizeInput(document.getElementById('intervention')); 
     showView('home');
 });
 
@@ -322,6 +320,7 @@ window.openEditModal = (id) => {
     document.getElementById('editResponseStatus').value = item.responseStatus || "Pending";
     document.getElementById('editNotes').value = item.notes || "";
     document.getElementById('editModificationNote').value = item.modificationNote || "";
+    document.getElementById('editFollowUp').checked = item.followUp || false;
 
     window.toggleEditModField();
     document.getElementById('view-edit-modal').classList.remove('hidden');
@@ -339,26 +338,36 @@ window.toggleEditModField = () => {
     document.getElementById('editModField').classList.toggle('hidden', !isMod);
 };
 
-document.getElementById('editSubmitBtn').addEventListener('click', async (e) => {
+document.getElementById('editSubmitBtn').addEventListener('click', (e) => {
     e.preventDefault();
     const id = document.getElementById('editItemId').value;
     if (!id) return;
 
+    const isEditFollowUpChecked = document.getElementById('editFollowUp').checked;
+    const patientId = document.getElementById('editPatientId').value;
+    const ward = document.getElementById('editWard').value;
+    const intervention = document.getElementById('editIntervention').value;
+
     const updatedData = {
-        patientId: document.getElementById('editPatientId').value,
-        ward: document.getElementById('editWard').value,
+        patientId: patientId,
+        ward: ward,
         urgency: document.getElementById('editUrgency').value,
         issue: document.getElementById('editIssue').value,
-        intervention: document.getElementById('editIntervention').value,
+        intervention: intervention,
         responseStatus: document.getElementById('editResponseStatus').value,
         notes: document.getElementById('editNotes').value || "",
+        followUp: isEditFollowUpChecked,
         modificationNote: document.getElementById('editResponseStatus').value === 'Modified' ? document.getElementById('editModificationNote').value : ""
     };
 
-    try {
-        await updateDoc(doc(db, "interventions", id), updatedData);
-        window.closeEditModal();
-    } catch (err) { alert("Failed to update: " + err.message); }
+    // Fast asynchronous database execution
+    updateDoc(doc(db, "interventions", id), updatedData).catch(err => console.error("Edit update crash:", err));
+    
+    if (isEditFollowUpChecked) {
+        window.triggerNativeCalendarReminder(patientId, ward, intervention);
+    }
+
+    window.closeEditModal();
 });
 
 window.deleteCurrentRecord = async () => {
