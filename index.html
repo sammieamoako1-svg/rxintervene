@@ -116,7 +116,7 @@
             </div>
         </section>
 
-        <!-- SETUP VIEW -->
+        <!-- SETUP / SETTINGS VIEW -->
         <section id="view-setup" class="hidden p-4 space-y-6 pb-32">
             <h2 class="font-extrabold text-xl text-slate-800">Setup</h2>
             
@@ -145,8 +145,12 @@
                 </div>
             </div>
 
-            <!-- Standard Administrative Actions -->
+            <!-- Standard Administrative Actions & PWA Installation Interface -->
             <div class="bg-slate-50 rounded-[2.5rem] p-4 space-y-3">
+                <!-- Native PWA Engine Target (Hidden by default, unhides if installable browser criteria matches) -->
+                <button id="pwaInstallBtn" class="hidden w-full py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100">
+                    📲 Install RxIntervene App
+                </button>
                 <button onclick="window.exportToPDF()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg">Export Interventions</button>
                 <button onclick="window.exportCounselingToPDF()" class="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg">Export Counseling Notes</button>
                 <button onclick="window.handleLogout()" class="w-full py-3 text-red-500 font-bold text-[10px] uppercase">Sign Out</button>
@@ -188,7 +192,7 @@
         </form>
     </section>
 
-    <!-- EDIT ENTRY MODAL (WITH ACCESSIBLE PERMANENT REMOVAL TERMINALS) -->
+    <!-- EDIT ENTRY MODAL -->
     <section id="view-edit-modal" class="hidden fixed inset-0 bg-white z-[250] overflow-y-auto">
         <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
             <button onclick="window.closeEditModal()" class="text-slate-400 font-bold">Cancel</button>
@@ -231,7 +235,6 @@
                 <input type="text" id="editNotes" placeholder="General Clinical Notes" class="w-full p-3 rounded-xl bg-white/20 text-white text-sm outline-none">
             </div>
 
-            <!-- THE DELETION ACCESS CORE -->
             <div class="pt-6 border-t border-slate-100 mt-6">
                 <button type="button" onclick="window.deleteCurrentRecord()" class="w-full py-4 border-2 border-red-100 text-red-500 hover:bg-red-50 rounded-2xl font-black text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
                     🗑️ Delete Record Permanently
@@ -270,10 +273,10 @@
         </div>
     </nav>
 
-    <!-- ENVIRONMENTAL DECOUPLING AND CONFIG ENGINE LOADING -->
+    <!-- CONFIG LAYER COUPLING ENGINE -->
     <script type="module">
         import { env } from "./config.js";
-        window.env = env; // Populates globally before client execution files run
+        window.env = env;
     </script>
     <script type="module" src="index.js"></script>
 </body>
