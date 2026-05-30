@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, updateDoc, doc, serverTimestamp, query, orderBy, onSnapshot, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, onSnapshot, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
@@ -18,7 +18,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Stable model production framework endpoint configuration
+// Stable production platform model container registry connection
 const aiModel = new GoogleGenerativeAI(window.env?.GEMINI_API_KEY || "").getGenerativeModel({ 
     model: "gemini-3.1-flash-lite", 
     safetySettings: [{ category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }]
@@ -286,6 +286,19 @@ document.getElementById('editSubmitBtn').addEventListener('click', async (e) => 
     } catch (err) { alert("Failed to update: " + err.message); }
 });
 
+// Safety-locked deletion engine execution route
+window.deleteCurrentRecord = async () => {
+    const id = document.getElementById('editItemId').value;
+    if (!id) return;
+    
+    if (confirm("Are you absolutely sure you want to permanently delete this clinical record? This action cannot be undone.")) {
+        try {
+            await deleteDoc(doc(db, "interventions", id));
+            window.closeEditModal();
+        } catch (err) { alert("Failed to delete record: " + err.message); }
+    }
+};
+
 // --- 7. HIGH-FIDELITY PRINT & HOME CONTROLS ---
 const sharedPrintStyle = `
     <style>
@@ -410,12 +423,11 @@ function renderChart(id, type, labels, data) {
     else if (id === 'trendChart') trendChart = nc;
 }
 
-// --- 9. AI INSTITUTIONAL STATISTICAL AUDIT ENGINE (DYNAMIC SELECT TIMEFRAME) ---
+// --- 9. AI CLINICAL DYNAMIC LAYOUT CARD COMPILER ---
 window.generateAiAuditReport = async () => {
     const btn = document.getElementById('aiAuditBtn');
     const outputBox = document.getElementById('ai-audit-output');
     
-    // Reads chosen state from Analytics month selector dropdown directly
     const monthSelectEl = document.getElementById('monthFilter');
     const selectedValue = monthSelectEl.value; 
     const selectedMonthLabel = monthSelectEl.options[monthSelectEl.selectedIndex].text;
@@ -424,7 +436,6 @@ window.generateAiAuditReport = async () => {
     const activeDataset = allInterventions.filter(i => i.ward !== 'Counseling');
     let filteredRecords = [];
 
-    // Evaluate dropdown parameters: "all" compiles full database, otherwise maps month indices
     if (selectedValue === 'all') {
         filteredRecords = activeDataset;
     } else {
@@ -456,33 +467,77 @@ window.generateAiAuditReport = async () => {
         ${anonymousLogPayload}
         
         TASK:
-        Generate a highly professional, well-structured institutional governance audit report. Use bold lines or headers for readability. Focus strictly on tracking clinical patterns, systemic workflow vulnerabilities across wards, and team acceptance trends.
+        Generate a highly professional, well-structured institutional governance audit report. Use raw markdown headers exactly as written below. Focus strictly on tracking clinical patterns, systemic workflow vulnerabilities across wards, and team acceptance trends.
         
         THE FORMAT MUST INCLUDE:
-        1. ### EXECUTIVE SUMMARY
-           - Total clinical interventions verified for this period.
-           - High-level evaluation of overall clinical safety impact.
-        2. ### WARD VULNERABILITIES & MEDICATIONS TRENDS
-           - Trace precisely which wards are generating the highest frequency of errors or intervention needs.
-           - Identify the predominant categories of clinical issues seen in the logs.
-        3. ### CLINICAL ACTIONS & RECOMMENDATIONS
-           - Provide 2 to 3 actionable, clear strategies hospital leadership can implement immediately to prevent these common mistakes from recurring.
-           
-        Keep the tone authoritative, clinical, crisp, and objective. Do not include casual pleasantries or meta-commentary.
+        ### EXECUTIVE SUMMARY
+        Provide clinical summary and high-level verification data.
+        
+        ### WARD VULNERABILITIES & MEDICATIONS TRENDS
+        Trace precise wards error patterns and issues.
+        
+        ### CLINICAL ACTIONS & RECOMMENDATIONS
+        Provide actionable strategy points using standard hyphens.
     `;
 
     try {
         const response = await aiModel.generateContent(auditPrompt);
-        let reportText = response.response.text();
+        let rawMarkdown = response.response.text();
 
-        let cleanHtmlReport = reportText
-            .replace(/\n/g, '<br>')
-            .replace(/### (EXECUTIVE SUMMARY|WARD VULNERABILITIES & MEDICATIONS TRENDS|CLINICAL ACTIONS & RECOMMENDATIONS)/g, '<br><h4 class="text-blue-400 font-extrabold text-xs tracking-tight border-b border-white/5 pb-1 uppercase">$1</h4>')
-            .replace(/- /g, '<span class="text-blue-500 font-bold mr-1">▪</span> ');
+        // 1. SPLIT GENERATED SECTIONS INTO ISOLATED DATA CHUNKS
+        const sections = rawMarkdown.split(/###\s+/);
+        let consolidatedUiCards = "";
 
+        sections.forEach(chunk => {
+            if (!chunk.trim()) return;
+
+            // 2. PARSE AND FORMAT HEADERS INDEPENDENTLY
+            const lines = chunk.split('\n');
+            const headerTitle = lines[0].trim();
+            const bodyContent = lines.slice(1).join('\n').trim();
+
+            if (headerTitle === "EXECUTIVE SUMMARY") {
+                consolidatedUiCards += `
+                    <div class="border-l-4 border-blue-500 bg-white/5 p-5 rounded-2xl space-y-2 border border-white/5 shadow-inner">
+                        <h4 class="text-blue-400 font-extrabold text-[11px] uppercase tracking-wider">📋 Executive Summary</h4>
+                        <p class="text-slate-300 text-xs font-medium leading-relaxed">${bodyContent.replace(/\n/g, '<br>')}</p>
+                    </div>`;
+            } 
+            else if (headerTitle === "WARD VULNERABILITIES & MEDICATIONS TRENDS") {
+                consolidatedUiCards += `
+                    <div class="border-l-4 border-amber-500 bg-amber-950/20 p-5 rounded-2xl space-y-2 border border-amber-500/10 shadow-inner">
+                        <h4 class="text-amber-400 font-extrabold text-[11px] uppercase tracking-wider">⚠️ Ward Vulnerabilities & Trends</h4>
+                        <p class="text-amber-100 text-xs font-medium leading-relaxed">${bodyContent.replace(/\n/g, '<br>')}</p>
+                    </div>`;
+            } 
+            else if (headerTitle === "CLINICAL ACTIONS & RECOMMENDATIONS") {
+                // Parse plain bullet lines out into beautiful individual grid badges
+                let unrolledBulletsHtml = "";
+                let itemNumber = 1;
+                
+                bodyContent.split('\n').forEach(line => {
+                    let cleanedLine = line.replace(/^-\s+/, '').trim();
+                    if (!cleanedLine) return;
+                    
+                    unrolledBulletsHtml += `
+                        <div class="flex items-start gap-3 bg-white/5 border border-white/5 p-3 rounded-xl">
+                            <span class="w-5 h-5 bg-blue-600/30 text-blue-400 flex items-center justify-center font-black rounded-lg text-[10px] shrink-0 mt-0.5">${itemNumber++}</span>
+                            <p class="text-slate-200 text-xs font-medium leading-normal">${cleanedLine}</p>
+                        </div>`;
+                });
+
+                consolidatedUiCards += `
+                    <div class="space-y-2">
+                        <h4 class="text-emerald-400 font-extrabold text-[11px] uppercase tracking-wider px-1">🚀 Recommended Interventions</h4>
+                        <div class="space-y-2.5">${unrolledBulletsHtml}</div>
+                    </div>`;
+            }
+        });
+
+        // Inject the freshly compiled premium layout schema straight into the console container
         outputBox.innerHTML = `
-            <div class="prose prose-invert max-w-none space-y-2 text-slate-300 animate-fadeIn">
-                ${cleanHtmlReport}
+            <div class="space-y-4 animate-fadeIn">
+                ${consolidatedUiCards}
             </div>
             <button onclick="window.printAiAudit('${auditPeriodFrame}')" class="w-full mt-4 py-3 bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all no-print">🖨️ Print Governance Report</button>
         `;
@@ -504,8 +559,11 @@ window.printAiAudit = (period) => {
                 <style>
                     body { font-family: sans-serif; padding: 45px; max-width: 800px; margin: 0 auto; color: #1e293b; }
                     .header { border-bottom: 4px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; }
-                    h4 { color: #1e3a8a; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 25px; }
+                    h4 { color: #1e3a8a; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 25px; margin-bottom: 10px; }
                     div { font-size: 12px; line-height: 1.6; }
+                    p { margin: 5px 0; }
+                    .flex { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+                    span { display: inline-block; font-weight: bold; color: #1e3a8a; min-width: 20px; }
                     .no-print { display: none !important; }
                 </style>
             </head>
