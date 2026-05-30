@@ -22,7 +22,6 @@
 </head>
 <body class="bg-slate-50 h-screen flex flex-col overflow-hidden text-slate-900">
 
-    <!-- AUTHENTICATION VIEW -->
     <section id="view-auth" class="fixed inset-0 bg-white z-[100] flex flex-col p-8 space-y-6">
         <div class="mt-12 text-center">
             <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center shadow-xl shadow-blue-100 mb-4 theme-transition">
@@ -49,7 +48,6 @@
         </div>
     </section>
 
-    <!-- HEADER -->
     <header class="bg-white px-6 py-4 shadow-sm border-b z-10 flex justify-between items-center">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-100 theme-transition header-icon">
@@ -60,13 +58,16 @@
                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">UCC Hospital</p>
             </div>
         </div>
-        <button onclick="showView('setup')" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-sm border border-slate-200 active:scale-90 transition-transform">👤</button>
+        <div class="flex items-center gap-2">
+            <button onclick="window.togglePrivacyMask()" id="privacyToggleBtn" class="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-sm active:scale-90 transition-transform select-none" title="Toggle Demo Privacy Mask">
+                A🔓
+            </button>
+            <button onclick="showView('setup')" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-sm border border-slate-200 active:scale-90 transition-transform">👤</button>
+        </div>
     </header>
 
-    <!-- MAIN SCROLLABLE CONTENT -->
     <main class="flex-1 overflow-y-auto pb-32 hide-scrollbar">
         
-        <!-- HOME / ACTIVITY VIEW -->
         <section id="view-home" class="p-4 space-y-3">
             <div class="flex justify-between items-center px-1 mb-2">
                 <h2 class="font-extrabold text-xl text-slate-800">Activity</h2>
@@ -86,7 +87,6 @@
             <div id="intervention-list" class="space-y-4"></div>
         </section>
 
-        <!-- FOLLOW-UP VIEW -->
         <section id="view-followup" class="hidden p-4 space-y-4 pb-32">
             <div class="flex justify-between items-center px-1">
                 <h2 class="font-extrabold text-xl text-slate-800">Follow-ups</h2>
@@ -95,7 +95,6 @@
             <div id="followup-list-today" class="space-y-4"></div>
         </section>
 
-        <!-- ANALYTICS VIEW -->
         <section id="view-analytics" class="hidden p-4 space-y-4 pb-32">
             <div class="flex justify-between items-center px-1">
                 <h2 class="font-extrabold text-xl text-slate-800">Analytics</h2>
@@ -116,11 +115,9 @@
             </div>
         </section>
 
-        <!-- SETUP / SETTINGS VIEW -->
         <section id="view-setup" class="hidden p-4 space-y-6 pb-32">
             <h2 class="font-extrabold text-xl text-slate-800">Setup</h2>
             
-            <!-- User Profile Card -->
             <div class="bg-white p-5 rounded-[2.5rem] border border-slate-200 flex items-center gap-4">
                 <div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 text-xl font-black avatar-box">SA</div>
                 <div>
@@ -129,7 +126,6 @@
                 </div>
             </div>
 
-            <!-- AI GENERATED AUDIT WORKSPACE -->
             <div class="bg-slate-950 rounded-[2.5rem] p-6 text-white space-y-4 shadow-xl">
                 <div class="flex justify-between items-center border-b border-white/10 pb-3">
                     <div>
@@ -139,16 +135,12 @@
                     <button onclick="window.generateAiAuditReport()" id="aiAuditBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-wider px-4 py-2.5 rounded-xl transition-colors">✨ Run Audit</button>
                 </div>
                 
-                <!-- Display Output Container -->
                 <div id="ai-audit-output" class="hidden text-xs leading-relaxed font-medium text-slate-200 space-y-4 max-h-96 overflow-y-auto pr-1 hide-scrollbar">
-                    <!-- Dynamic audit visual component panels populate here -->
-                </div>
+                    </div>
             </div>
 
-            <!-- Standard Administrative Actions & PWA Installation Interface -->
             <div class="bg-slate-50 rounded-[2.5rem] p-4 space-y-3">
-                <!-- Native PWA Engine Target (Hidden by default, unhides if installable browser criteria matches) -->
-                <button id="pwaInstallBtn" class="hidden w-full py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100">
+                <button id="pwaInstallBtn" class="hidden w-full py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 animate-pulse">
                     📲 Install RxIntervene App
                 </button>
                 <button onclick="window.exportToPDF()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg">Export Interventions</button>
@@ -158,7 +150,6 @@
         </section>
     </main>
 
-    <!-- INTERVENTION FORM -->
     <section id="view-form" class="hidden fixed inset-0 bg-white z-[60] overflow-y-auto">
         <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
             <button onclick="showView('home')" class="text-slate-400 font-bold">Cancel</button>
@@ -192,7 +183,6 @@
         </form>
     </section>
 
-    <!-- EDIT ENTRY MODAL -->
     <section id="view-edit-modal" class="hidden fixed inset-0 bg-white z-[250] overflow-y-auto">
         <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
             <button onclick="window.closeEditModal()" class="text-slate-400 font-bold">Cancel</button>
@@ -243,7 +233,6 @@
         </form>
     </section>
 
-    <!-- COUNSELING MODAL -->
     <section id="view-counseling" class="hidden fixed inset-0 bg-white z-[200] overflow-y-auto">
         <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
             <button onclick="window.toggleCounselingForm(false)" class="text-slate-400 font-bold">Cancel</button>
@@ -259,10 +248,8 @@
         </form>
     </section>
 
-    <!-- FLOATING COUNSELING ICON -->
     <button onclick="window.toggleCounselingForm(true)" class="fixed bottom-28 right-6 w-16 h-16 bg-emerald-600 text-white rounded-full shadow-2xl z-[80] flex items-center justify-center text-3xl active:scale-90 transition-transform">💬</button>
 
-    <!-- NAVIGATION -->
     <nav class="fixed bottom-0 w-full bg-white/80 backdrop-blur-lg border-t pt-3 pb-8 px-4 z-40 safe-bottom">
         <div class="flex justify-around items-center">
             <button onclick="showView('home')" id="nav-home" class="flex flex-col items-center gap-1 w-1/5 text-blue-600"><span class="text-2xl">🏠</span><span class="text-[9px] font-black uppercase">Home</span></button>
@@ -273,7 +260,6 @@
         </div>
     </nav>
 
-    <!-- CONFIG LAYER COUPLING ENGINE -->
     <script type="module">
         import { env } from "./config.js";
         window.env = env;
