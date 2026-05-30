@@ -29,8 +29,18 @@ let unsubscribeSnapshot = null;
 let lastAiAdvice = "";
 let deferredPrompt; 
 
-// Initialise presentation screen recording masking parameters
 window.privacyModeActive = false;
+
+// --- AUTO-EXPANDING HEIGHT CALCULATION ENGINE ---
+window.autoResizeInput = (element) => {
+    if (!element) return;
+    element.style.height = 'auto'; 
+    element.style.height = element.scrollHeight + 'px'; 
+};
+
+document.querySelectorAll('.auto-resize').forEach(textarea => {
+    textarea.addEventListener('input', () => window.autoResizeInput(textarea));
+});
 
 // --- PWA APPLICATION INSTALL MANAGER ---
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -51,6 +61,20 @@ document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => 
     deferredPrompt = null; 
     document.getElementById('pwaInstallBtn').classList.add('hidden'); 
 });
+
+// --- NATIVE REMINDER INTEGRATION ENGINE ---
+window.triggerNativeCalendarReminder = (patientId, ward, interventionNotes) => {
+    // Encodes strings securely to follow valid web URI parameters
+    const encodedTitle = encodeURIComponent(`💊 RxIntervene Review: ${patientId}`);
+    const compiledBody = `Patient ID: ${patientId}\nHospital Ward Location: ${ward}\n\nClinical Intervention Profile Notes:\n${interventionNotes}\n\n---\nLogged securely via RxIntervene Workspace.`;
+    const encodedDetails = encodeURIComponent(compiledBody);
+    
+    // Builds the dynamic system layout template for Google's native calendar engine
+    const googleCalendarIntentUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodedTitle}&details=${encodedDetails}`;
+    
+    // Commands the phone or desktop operating system to open the default app framework
+    window.open(googleCalendarIntentUrl, '_blank');
+};
 
 // --- 2. AUTHENTICATION & USER MAPPING ---
 onAuthStateChanged(auth, (user) => {
@@ -116,7 +140,12 @@ window.invokeAiAssistant = async () => {
     } catch (e) { txt.innerText = "Error assembling data."; }
 };
 
-window.applyAiSuggestion = () => { document.getElementById('intervention').value = lastAiAdvice; document.getElementById('ai-panel').classList.add('hidden'); };
+window.applyAiSuggestion = () => { 
+    const entryInput = document.getElementById('intervention');
+    entryInput.value = lastAiAdvice; 
+    document.getElementById('ai-panel').classList.add('hidden'); 
+    window.autoResizeInput(entryInput); 
+};
 
 // --- 4. NAVIGATION & COUNSELING ---
 window.showView = (name) => {
@@ -159,28 +188,42 @@ document.getElementById('counselingForm').addEventListener('submit', async (e) =
     e.target.reset(); window.toggleCounselingForm(false);
 });
 
-// --- 5. CORE ACTIONS ---
+// --- 5. CORE ACTIONS & ENTRY INGESTION ---
 window.toggleModField = () => { document.getElementById('modField').classList.toggle('hidden', document.getElementById('responseStatus').value !== 'Modified'); };
 
 window.completeFollowUp = async (id) => { await updateDoc(doc(db, "interventions", id), { followUp: false }); };
 
 document.getElementById('interventionForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    const isFollowUpChecked = document.getElementById('followUp').checked;
+    const patientId = document.getElementById('patientId').value;
+    const ward = document.getElementById('ward').value;
+    const intervention = document.getElementById('intervention').value;
+
     const data = { 
-        patientId: document.getElementById('patientId').value, 
-        ward: document.getElementById('ward').value, 
+        patientId: patientId, 
+        ward: ward, 
         urgency: document.getElementById('urgency').value, 
         issue: document.getElementById('issue').value, 
-        intervention: document.getElementById('intervention').value, 
+        intervention: intervention, 
         responseStatus: document.getElementById('responseStatus').value, 
         modificationNote: document.getElementById('modificationNote').value || "", 
         notes: document.getElementById('notes').value || "", 
-        followUp: document.getElementById('followUp').checked, 
+        followUp: isFollowUpChecked, 
         userId: auth.currentUser.uid, 
         createdAt: serverTimestamp() 
     };
+    
     await addDoc(collection(db, "interventions"), data); 
     e.target.reset(); 
+    window.autoResizeInput(document.getElementById('intervention')); 
+    
+    // Intercept thread: Runs calendar injection prompt seamlessly if review flag configuration matches
+    if (isFollowUpChecked) {
+        window.triggerNativeCalendarReminder(patientId, ward, intervention);
+    }
+    
     showView('home');
 });
 
@@ -238,7 +281,6 @@ window.renderHomeList = () => {
             const colors = { 'Accepted': 'bg-green-100 text-green-700', 'Pending': 'bg-slate-100 text-slate-400', 'Rejected': 'bg-red-100 text-red-700', 'Modified': 'bg-yellow-100 text-yellow-700' };
             const cardDate = itemDate ? itemDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Recent';
             
-            // Runs local layout evaluations mapping presentation privacy states dynamically
             const maskingStyle = window.privacyModeActive ? "bg-slate-900 text-slate-900 rounded select-none pointer-events-none" : "text-slate-400";
             
             list.innerHTML += `
@@ -273,13 +315,18 @@ window.openEditModal = (id) => {
     document.getElementById('editWard').value = item.ward || "Emergency";
     document.getElementById('editUrgency').value = item.urgency || "Normal";
     document.getElementById('editIssue').value = item.issue || "";
-    document.getElementById('editIntervention').value = item.intervention || "";
+    
+    const editInterventionEl = document.getElementById('editIntervention');
+    editInterventionEl.value = item.intervention || "";
+    
     document.getElementById('editResponseStatus').value = item.responseStatus || "Pending";
     document.getElementById('editNotes').value = item.notes || "";
     document.getElementById('editModificationNote').value = item.modificationNote || "";
 
     window.toggleEditModField();
     document.getElementById('view-edit-modal').classList.remove('hidden');
+    
+    setTimeout(() => window.autoResizeInput(editInterventionEl), 50);
 };
 
 window.closeEditModal = () => {
@@ -615,7 +662,6 @@ window.togglePrivacyMask = () => {
         toggleBtn.classList.toggle('border-slate-950', window.privacyModeActive);
     }
     
-    // Force rebuild of activity feed elements to apply state modifications
     window.renderHomeList();
 };
 
