@@ -3,7 +3,7 @@ import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, serverTime
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-// --- 1. INITIALIZATION ---
+// --- 1. INITIALIZATION & DATA STATES ---
 const firebaseConfig = {
     apiKey: window.env?.FIREBASE_API_KEY || "", 
     authDomain: "rxintervene-f95ce.firebaseapp.com",
@@ -27,27 +27,29 @@ let allInterventions = [];
 let wardChart = null, trendChart = null, responseChart = null;
 let unsubscribeSnapshot = null;
 let lastAiAdvice = "";
-let deferredPrompt; // Tracks incoming PWA install invitations in memory
+let deferredPrompt; 
 
-// --- PWA INTERCEPTION RUNTIME ENGINE ---
+// Initialise presentation screen recording masking parameters
+window.privacyModeActive = false;
+
+// --- PWA APPLICATION INSTALL MANAGER ---
 window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault(); // Mutes basic system banner overlays
-    deferredPrompt = e;  // Intercepts the invitation object pointer
+    e.preventDefault(); 
+    deferredPrompt = e;  
     
-    // Unhides the custom action button inside Setup view
     const installBtn = document.getElementById('pwaInstallBtn');
     if (installBtn) installBtn.classList.remove('hidden');
 });
 
 document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => {
     if (!deferredPrompt) return;
-    deferredPrompt.prompt(); // Calls up browser download workflow confirmation modal
+    deferredPrompt.prompt(); 
     
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`PWA Deployment response vector: ${outcome}`);
+    console.log(`PWA Framework response deployment: ${outcome}`);
     
-    deferredPrompt = null; // Purges used event framework cache
-    document.getElementById('pwaInstallBtn').classList.add('hidden'); // Re-hides installer interface
+    deferredPrompt = null; 
+    document.getElementById('pwaInstallBtn').classList.add('hidden'); 
 });
 
 // --- 2. AUTHENTICATION & USER MAPPING ---
@@ -236,10 +238,15 @@ window.renderHomeList = () => {
             const colors = { 'Accepted': 'bg-green-100 text-green-700', 'Pending': 'bg-slate-100 text-slate-400', 'Rejected': 'bg-red-100 text-red-700', 'Modified': 'bg-yellow-100 text-yellow-700' };
             const cardDate = itemDate ? itemDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Recent';
             
+            // Runs local layout evaluations mapping presentation privacy states dynamically
+            const maskingStyle = window.privacyModeActive ? "bg-slate-900 text-slate-900 rounded select-none pointer-events-none" : "text-slate-400";
+            
             list.innerHTML += `
                 <div onclick="window.openEditModal('${item.id}')" class="bg-white p-5 rounded-[2rem] border mb-3 shadow-sm active:scale-[0.98] transition-transform cursor-pointer">
                     <div class="flex justify-between items-center mb-1">
-                        <p class="text-[10px] uppercase font-bold text-slate-400">${item.patientId} • ${item.ward}</p>
+                        <p class="text-[10px] uppercase font-bold tracking-wider transition-all duration-200">
+                            <span class="${maskingStyle}">${item.patientId}</span> • ${item.ward}
+                        </p>
                         <p class="text-[9px] text-slate-400">${cardDate}</p>
                     </div>
                     <h3 class="font-bold text-sm text-slate-800 mb-2">${item.intervention}</h3>
@@ -256,7 +263,7 @@ window.renderHomeList = () => {
     if(fup.innerHTML === "") fup.innerHTML = `<p class="text-center py-8 text-slate-400 text-xs font-semibold">No active follow-ups.</p>`;
 };
 
-// --- 6. ACTIVITY INLINE CARD EDIT ENGINE ---
+// --- 6. ACTIVITY INLINE CARD EDIT ENGINE & DELETE CORE ---
 window.openEditModal = (id) => {
     const item = allInterventions.find(i => i.id === id);
     if (!item) return;
@@ -594,6 +601,22 @@ window.printAiAudit = (period) => {
     `);
     printWindow.document.close();
     printWindow.print();
+};
+
+// --- 10. PRESENTATION PRIVACY REDACTION TERMINAL ---
+window.togglePrivacyMask = () => {
+    window.privacyModeActive = !window.privacyModeActive;
+    
+    const toggleBtn = document.getElementById('privacyToggleBtn');
+    if (toggleBtn) {
+        toggleBtn.innerText = window.privacyModeActive ? "🔒" : "🔓";
+        toggleBtn.classList.toggle('bg-slate-950', window.privacyModeActive);
+        toggleBtn.classList.toggle('text-white', window.privacyModeActive);
+        toggleBtn.classList.toggle('border-slate-950', window.privacyModeActive);
+    }
+    
+    // Force rebuild of activity feed elements to apply state modifications
+    window.renderHomeList();
 };
 
 document.addEventListener('keyup', (e) => { if (e.target.id === 'issue') document.getElementById('ai-trigger').classList.toggle('hidden', e.target.value.length < 5); });
