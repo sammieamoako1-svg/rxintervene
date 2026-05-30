@@ -18,7 +18,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Stable production platform model container registry connection
 const aiModel = new GoogleGenerativeAI(window.env?.GEMINI_API_KEY || "").getGenerativeModel({ 
     model: "gemini-3.1-flash-lite", 
     safetySettings: [{ category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }]
@@ -28,6 +27,28 @@ let allInterventions = [];
 let wardChart = null, trendChart = null, responseChart = null;
 let unsubscribeSnapshot = null;
 let lastAiAdvice = "";
+let deferredPrompt; // Tracks incoming PWA install invitations in memory
+
+// --- PWA INTERCEPTION RUNTIME ENGINE ---
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); // Mutes basic system banner overlays
+    deferredPrompt = e;  // Intercepts the invitation object pointer
+    
+    // Unhides the custom action button inside Setup view
+    const installBtn = document.getElementById('pwaInstallBtn');
+    if (installBtn) installBtn.classList.remove('hidden');
+});
+
+document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt(); // Calls up browser download workflow confirmation modal
+    
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`PWA Deployment response vector: ${outcome}`);
+    
+    deferredPrompt = null; // Purges used event framework cache
+    document.getElementById('pwaInstallBtn').classList.add('hidden'); // Re-hides installer interface
+});
 
 // --- 2. AUTHENTICATION & USER MAPPING ---
 onAuthStateChanged(auth, (user) => {
@@ -286,7 +307,6 @@ document.getElementById('editSubmitBtn').addEventListener('click', async (e) => 
     } catch (err) { alert("Failed to update: " + err.message); }
 });
 
-// Safety-locked deletion engine execution route
 window.deleteCurrentRecord = async () => {
     const id = document.getElementById('editItemId').value;
     if (!id) return;
@@ -484,14 +504,12 @@ window.generateAiAuditReport = async () => {
         const response = await aiModel.generateContent(auditPrompt);
         let rawMarkdown = response.response.text();
 
-        // 1. SPLIT GENERATED SECTIONS INTO ISOLATED DATA CHUNKS
         const sections = rawMarkdown.split(/###\s+/);
         let consolidatedUiCards = "";
 
         sections.forEach(chunk => {
             if (!chunk.trim()) return;
 
-            // 2. PARSE AND FORMAT HEADERS INDEPENDENTLY
             const lines = chunk.split('\n');
             const headerTitle = lines[0].trim();
             const bodyContent = lines.slice(1).join('\n').trim();
@@ -511,7 +529,6 @@ window.generateAiAuditReport = async () => {
                     </div>`;
             } 
             else if (headerTitle === "CLINICAL ACTIONS & RECOMMENDATIONS") {
-                // Parse plain bullet lines out into beautiful individual grid badges
                 let unrolledBulletsHtml = "";
                 let itemNumber = 1;
                 
@@ -534,7 +551,6 @@ window.generateAiAuditReport = async () => {
             }
         });
 
-        // Inject the freshly compiled premium layout schema straight into the console container
         outputBox.innerHTML = `
             <div class="space-y-4 animate-fadeIn">
                 ${consolidatedUiCards}
