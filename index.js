@@ -62,14 +62,17 @@ document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => 
     document.getElementById('pwaInstallBtn').classList.add('hidden'); 
 });
 
-// --- NATIVE REMINDER INTEGRATION ENGINE ---
+// --- NATIVE REMINDER INTEGRATION ENGINE (FIXED REDIRECT) ---
 window.triggerNativeCalendarReminder = (patientId, ward, interventionNotes) => {
+    // 1. Sanitize text payloads safely for standard HTTP browser link delivery
     const encodedTitle = encodeURIComponent(`💊 RxIntervene Review: ${patientId}`);
     const compiledBody = `Patient ID: ${patientId}\nHospital Ward Location: ${ward}\n\nClinical Intervention Profile Notes:\n${interventionNotes}\n\n---\nLogged securely via RxIntervene Workspace.`;
     const encodedDetails = encodeURIComponent(compiledBody);
     
+    // 2. Map payload dynamically into Google's raw calendar intent action template engine
     const googleCalendarIntentUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodedTitle}&details=${encodedDetails}`;
     
+    // 3. Hand over execution context to device system window
     window.open(googleCalendarIntentUrl, '_blank');
 };
 
