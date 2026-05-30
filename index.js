@@ -4,7 +4,6 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, on
 import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
 // --- 1. INITIALIZATION ---
-// Dynamically extracts runtime access credentials from the config.js environment layer
 const firebaseConfig = {
     apiKey: window.env?.FIREBASE_API_KEY || "", 
     authDomain: "rxintervene-f95ce.firebaseapp.com",
@@ -19,7 +18,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Uses the stable GA production model endpoint to bypass preview version deprecation
+// Stable model production framework endpoint configuration
 const aiModel = new GoogleGenerativeAI(window.env?.GEMINI_API_KEY || "").getGenerativeModel({ 
     model: "gemini-3.1-flash-lite", 
     safetySettings: [{ category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }]
@@ -411,27 +410,39 @@ function renderChart(id, type, labels, data) {
     else if (id === 'trendChart') trendChart = nc;
 }
 
-// --- 9. AI INSTITUTIONAL STATISTICAL AUDIT ENGINE (SETUP BASED) ---
+// --- 9. AI INSTITUTIONAL STATISTICAL AUDIT ENGINE (DYNAMIC SELECT TIMEFRAME) ---
 window.generateAiAuditReport = async () => {
     const btn = document.getElementById('aiAuditBtn');
     const outputBox = document.getElementById('ai-audit-output');
     
+    // Reads chosen state from Analytics month selector dropdown directly
+    const monthSelectEl = document.getElementById('monthFilter');
+    const selectedValue = monthSelectEl.value; 
+    const selectedMonthLabel = monthSelectEl.options[monthSelectEl.selectedIndex].text;
+    
     const now = new Date();
-    const currentMonthNum = now.getMonth();
-    const currentMonthLabel = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-
     const activeDataset = allInterventions.filter(i => i.ward !== 'Counseling');
-    let filteredRecords = activeDataset.filter(i => i.timestamp && i.timestamp.getMonth() === currentMonthNum && i.timestamp.getFullYear() === now.getFullYear());
+    let filteredRecords = [];
+
+    // Evaluate dropdown parameters: "all" compiles full database, otherwise maps month indices
+    if (selectedValue === 'all') {
+        filteredRecords = activeDataset;
+    } else {
+        const targetMonthNum = parseInt(selectedValue);
+        filteredRecords = activeDataset.filter(i => i.timestamp && i.timestamp.getMonth() === targetMonthNum && i.timestamp.getFullYear() === now.getFullYear());
+    }
+
+    const auditPeriodFrame = selectedValue === 'all' ? "All-Time Accumulation" : `${selectedMonthLabel} ${now.getFullYear()}`;
 
     if (filteredRecords.length === 0) {
-        alert(`No intervention records logged yet for ${currentMonthLabel} to perform an audit summary.`);
+        alert(`No intervention records logged yet for ${auditPeriodFrame} to perform an audit summary.`);
         return;
     }
 
     btn.disabled = true;
     btn.innerText = "Analyzing...";
     outputBox.classList.remove('hidden');
-    outputBox.innerHTML = `<div class="flex items-center gap-2 text-slate-400 py-4"><span class="animate-spin text-sm">⏳</span> Aggregating clinical metadata for ${currentMonthLabel}...</div>`;
+    outputBox.innerHTML = `<div class="flex items-center gap-2 text-slate-400 py-4"><span class="animate-spin text-sm">⏳</span> Aggregating clinical metadata for ${auditPeriodFrame}...</div>`;
 
     const anonymousLogPayload = filteredRecords.map((r, index) => {
         return `${index + 1}. Ward: ${r.ward} | Issue: ${r.issue} | Proposed Intervention: ${r.intervention} | Status: ${r.responseStatus} ${r.modificationNote ? `(Changes: ${r.modificationNote})` : ''}`;
@@ -439,7 +450,7 @@ window.generateAiAuditReport = async () => {
 
     const auditPrompt = `
         You are acting as a Chief Clinical Pharmacist and Institutional Health Informatics Auditor.
-        Analyze the following log of clinical interventions performed at UCC Hospital during the period: ${currentMonthLabel}.
+        Analyze the following log of clinical interventions performed at UCC Hospital during the period: ${auditPeriodFrame}.
         
         DATASET LOGS:
         ${anonymousLogPayload}
@@ -473,7 +484,7 @@ window.generateAiAuditReport = async () => {
             <div class="prose prose-invert max-w-none space-y-2 text-slate-300 animate-fadeIn">
                 ${cleanHtmlReport}
             </div>
-            <button onclick="window.printAiAudit('${currentMonthLabel}')" class="w-full mt-4 py-3 bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all no-print">🖨️ Print Governance Report</button>
+            <button onclick="window.printAiAudit('${auditPeriodFrame}')" class="w-full mt-4 py-3 bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all no-print">🖨️ Print Governance Report</button>
         `;
     } catch (error) {
         outputBox.innerHTML = `<div class="text-red-400 font-bold py-2">⚠️ Audit Processing Failed. Check connectivity profiles.</div>`;
