@@ -5,9 +5,8 @@ By transforming routine bedside activities into structured data, the platform se
 
 
 Status: In extensive use at the University of Cape Coast Hospital, Ghana, where it supports the documentation of clinical interventions on the wards. The AI guideline assistant is being rebuilt on a vector-based retrieval backend (see below).
-View Live Application
 
-The live application requires authorized login. The demonstration screenshots below provide a public overview of its interfaces.
+
 
 1. The Healthcare Challenge
 
@@ -17,15 +16,15 @@ However, many pharmaceutical interventions are communicated verbally or document
 
 This creates several challenges:
 
-Limited documentation of clinical pharmacy interventions.
+-Limited documentation of clinical pharmacy interventions.
 
-Difficulty tracking whether recommendations are accepted, modified, or rejected.
+-Difficulty tracking whether recommendations are accepted, modified, or rejected.
 
-Inadequate longitudinal records for monitoring clinical interventions.
+-Inadequate longitudinal records for monitoring clinical interventions.
 
-Limited availability of structured data for quality improvement.
+-Limited availability of structured data for quality improvement.
 
-Difficulty demonstrating clinical pharmacy contributions to hospital administrators and policymakers.
+-Difficulty demonstrating clinical pharmacy contributions to hospital administrators and policymakers.
 
 The central principle behind RxIntervene is simple:
 
@@ -51,7 +50,8 @@ The broader objective is to translate routine clinical pharmacy practice into in
 
 3. Application Demonstration
 
-The following images illustrate RxIntervene's clinical documentation, analytics, follow-up, and reporting interfaces.
+The live application requires authorized login. The demonstration screenshots below provide a public overview of its interfaces.
+
 
  **Notice: All screenshots contain fictional patient data or appropriately de-identified information.**
 
