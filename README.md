@@ -58,6 +58,7 @@ The live application requires authorized login. The demonstration screenshots be
 3.1 Clinical Intervention Activity
 
 The activity interface allows pharmacists to review documented interventions across clinical departments, including their recorded outcomes.
+<img width="32%" height="360" alt="image" src="https://github.com/user-attachments/assets/2e577500-89bd-4d69-b568-9665e92f7cea" />
 
 
 
@@ -65,11 +66,17 @@ The activity interface allows pharmacists to review documented interventions acr
 
 The intervention management interface supports documentation of clinical issues, pharmacist recommendations, intervention outcomes, and subsequent corrections.
 
+<img width="35%" height="360" alt="image" src="https://github.com/user-attachments/assets/d2620891-96df-4037-afa1-dc527472bd84" />
+
 
 
 3.3 Analytics and Performance Monitoring
 
 The analytics interface presents intervention activity through summary statistics and visualizations, including recorded intervention volumes, acceptance rates, departmental distributions, and outcomes.
+<img width="40%" height="360" alt="image" src="https://github.com/user-attachments/assets/a414a533-8376-4a2d-84c0-0549f789633c" />
+
+<img width="40%" height="360" alt="image" src="https://github.com/user-attachments/assets/134193b2-3018-47e3-a9ef-0dfd056fba72" />
+
 
 
 
@@ -77,11 +84,15 @@ The analytics interface presents intervention activity through summary statistic
 
 The follow-up interface supports the monitoring of clinical recommendations requiring subsequent review or action.
 
+<img width="32%" height="360" alt="image" src="https://github.com/user-attachments/assets/634cb39e-5d0c-47b4-84ae-7f34e8e4b5a9" />
+
 
 
 3.5 AI Clinical Audit and Reporting
 
 The platform includes an AI clinical audit interface and options for exporting clinical intervention and counselling records.
+
+<img width="32%" height="360" alt="image" src="https://github.com/user-attachments/assets/0319728b-5631-4729-b52b-0ef5d03605e0" />
 
 
 4. Core Platform Features
